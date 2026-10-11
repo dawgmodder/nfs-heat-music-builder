@@ -1,0 +1,26 @@
+# Keep this repository source-only.
+output/
+runtime/
+node_modules/
+.vs/
+bin/
+obj/
+*.exe
+*.dll
+*.pdb
+*.ico
+*.zip
+*.log
+*.key
+*.heatpreset
+*.mp3
+*.wav
+*.flac
+*.ogg
+*.ealayer3
+*.cas
+*.toc
+*.sb
+*.fbmod
+.env
+.env.*
