@@ -5,8 +5,8 @@ const path=require('path');
 const https=require('https');
 const crypto=require('crypto');
 const root=path.resolve(__dirname,'..');
-const packageName=process.argv[2]||'HeatMusicPortableV4_2_Distribution';
-if(!/^HeatMusicPortableV4_2(?:_Distribution|_Final)?$/.test(packageName))
+const packageName=process.argv[2]||'HeatMusicPortableV4_3_Distribution';
+if(!/^HeatMusicPortableV4_3(?:_Distribution|_Final)?$/.test(packageName))
   throw new Error('Unexpected package name');
 const target=path.join(root,'output',packageName);
 const work=path.join(target,'work'),out=path.join(target,'output');
@@ -15,7 +15,7 @@ const files=[
   'HeatVisualTheme.cs','HeatMusicBrand.cs','HeatMusicPresetStore.cs','HeatMusicAudioCache.js',
   'HeatMusicPaths.js','ExtractOwnedGameKey.js','BuildPortableBaseline.js',
   'HeatMusicCancellation.js','HeatMusicTiming.js','HeatMusicEaLayer3.js','HeatMusicEaEncoder.js','HeatMusicGameAudit.js','HeatMusicBuilder.js','HeatMusicPlaylistBuilder.js',
-  'HeatMusicBuildFolders.js','RunHeatMetadata.js','ExportPreparedHeatMusic.js',
+  'HeatMusicBuildFolders.js','RunHeatMetadata.js','ExportPreparedHeatMusic.js','HeatMusicFrostyCompanion.js',
   'HeatMusicIntroPlaylistBuilder.js','NormalizeUnsafeAudio.js','EaBitrateCandidates.js',
   'EaPartialDuration.js','InstallPreparedHeatMusic.js',
   'VerifyPreparedHeatMusicIntroPlaylists.js','VerifyPreparedHeatMusicPlaylist.js',
@@ -54,9 +54,9 @@ async function main(){
   fs.mkdirSync(path.join(target,'runtime'));
   fs.copyFileSync(nodeSource,path.join(target,'runtime','node.exe'));
   fs.writeFileSync(path.join(target,'NODE-LICENSE.txt'),license);
-  fs.copyFileSync(path.join(__dirname,'HeatMusicInstallerV4_2.exe'),
-    path.join(target,'HeatMusicInstallerV4_2.exe'));
-  fs.copyFileSync(path.join(__dirname,'README-English-V4_2.txt'),
+  fs.copyFileSync(path.join(__dirname,'HeatMusicInstallerV4_3.exe'),
+    path.join(target,'HeatMusicInstallerV4_3.exe'));
+  fs.copyFileSync(path.join(__dirname,'README-English-V4_3.txt'),
     path.join(target,'README.txt'));
   for(const name of files)fs.copyFileSync(path.join(__dirname,name),path.join(work,name));
   for(const name of manifests){

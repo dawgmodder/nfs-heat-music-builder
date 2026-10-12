@@ -23,7 +23,6 @@ const ffprobe = paths.ffprobe;
 const converterDir = paths.converterDir;
 const converter = paths.converter;
 const metadataBuilder = path.resolve(__dirname, 'HeatTrack24SizeMod.exe');
-const metadataApplier = path.resolve(__dirname, 'ApplyHeatTrack24Size.exe');
 const eaDecoder = path.resolve(__dirname, 'DecodeOriginalEaForLoudness.exe');
 const configPath = process.argv[2] ? path.resolve(process.argv[2]) : null;
 const prepareOnly = process.argv.includes('--prepare-only');
@@ -101,7 +100,7 @@ if(!config.slots || requiredSlots.some(slot=>typeof config.slots[slot]!=='string
   throw new Error('All eight source files must exist');
 for(const field of ['dropDaySeconds','dropNightSeconds'])
   if(!Number.isFinite(config[field]) || config[field]<10 || config[field]>600) throw new Error('Invalid '+field);
-for(const file of [ffmpeg,ffprobe,converter,metadataBuilder,metadataApplier,eaDecoder,
+for(const file of [ffmpeg,ffprobe,converter,metadataBuilder,eaDecoder,
   path.join(baseline,'Data','Win32','chunks0.toc')])
   if(!fs.existsSync(file)) throw new Error('Required local tool or tested baseline missing: '+file);
 const buildId=resumeIndex>=0 ? path.basename(process.argv[resumeIndex+1]) :

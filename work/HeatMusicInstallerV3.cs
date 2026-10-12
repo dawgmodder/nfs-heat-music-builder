@@ -18,6 +18,7 @@ internal sealed class HeatMusicInstallerV3 : Form
     private readonly Button savePreset=new Button(),loadPreset=new Button();
         private readonly TabControl tabs = new HeatNavigationTabs();
     private readonly HeatMusicPlanEditor editor;
+    private readonly HeatMusicFrostyPanel frostyPanel;
     private readonly string workspace,script,node;
     private readonly bool portable;
     private string lastReportJson,runLogPath,cancelPath;
@@ -52,7 +53,7 @@ internal sealed class HeatMusicInstallerV3 : Form
         editor=new HeatMusicPlanEditor();
         script=Path.Combine(workspace,"work",portable?"HeatMusicPortableEntry.js":"HeatMusicAutoPlanner.js");
         node=portable?Path.Combine(workspace,"runtime","node.exe"):@"C:\Program Files\nodejs\node.exe";
-        Text="NFS Heat — Music Builder V4.2";
+        Text="NFS Heat — Music Builder V4.3";
         Icon=HeatMusicBrand.CreateIcon();notifier.Icon=Icon;notifier.Text="Heat Music Builder 4";
         notifier.BalloonTipClicked+=(s,e)=>{Show();WindowState=FormWindowState.Normal;Activate();};
         notifier.DoubleClick+=(s,e)=>{Show();WindowState=FormWindowState.Normal;Activate();};
@@ -83,6 +84,9 @@ internal sealed class HeatMusicInstallerV3 : Form
         presetBar.Controls.Add(new Label{Text="Music, settings and available conversions",AutoSize=true,Margin=new Padding(10,9,0,0)});
         editTab.Controls.Add(presetBar);
         tabs.TabPages.Add(installTab);tabs.TabPages.Add(editTab);
+        frostyPanel=new HeatMusicFrostyPanel(workspace,node,()=>gameFolder.Text.Trim(),()=>running!=null||presetBusy,Notify);
+        frostyPanel.Finished+=()=>{if(closeRequested)Close();};
+        var frostyTab=new TabPage("Finish Frosty"){BackColor=HeatVisualTheme.Asphalt};frostyTab.Controls.Add(frostyPanel);tabs.TabPages.Add(frostyTab);
         var shell=new Panel{Dock=DockStyle.Fill,BackColor=HeatVisualTheme.Void};
         var statusBar=new Panel{Dock=DockStyle.Bottom,Height=46,Padding=new Padding(20,8,20,8),BackColor=HeatVisualTheme.Panel};
         statusBar.Controls.Add(activity);statusBar.Controls.Add(notifications);statusBar.Controls.Add(progress);
@@ -100,6 +104,7 @@ internal sealed class HeatMusicInstallerV3 : Form
         tabs.SelectedIndexChanged+=(s,e)=>updateNavigation();updateNavigation();
         Shown+=(s,e)=>updateNavigation();
         navigation.Controls.Add(navInstall);navigation.Controls.Add(navLibrary);
+        var navFrosty=new Button{Text="FINISH FROSTY",Width=180,Height=38};HeatVisualTheme.StyleButton(navFrosty);navFrosty.Click+=(s,e)=>tabs.SelectedIndex=2;navigation.Controls.Add(navFrosty);
         shell.Controls.Add(tabs);shell.Controls.Add(statusBar);shell.Controls.Add(navigation);shell.Controls.Add(new HeatHeaderPanel());Controls.Add(shell);
         var gameLabel=new Label{Text="NFS Heat folder (Steam/EA App)",Dock=DockStyle.Fill,
             TextAlign=ContentAlignment.MiddleLeft};
@@ -173,7 +178,7 @@ internal sealed class HeatMusicInstallerV3 : Form
         analyze.Margin=new Padding(0,0,12,0);install.Margin=new Padding(0);
         actions.Controls.Add(analyze,0,0);actions.Controls.Add(install,1,0);
         panel.Controls.Add(actions,0,3);panel.SetColumnSpan(actions,3);
-        var safety=new Label{Text="Build an FBMOD, import it in Frosty Mod Manager, enable it with your other mods and launch the game from Frosty.",Dock=DockStyle.Fill,ForeColor=HeatVisualTheme.Muted,Font=HeatVisualTheme.Ui(9)};
+        var safety=new Label{Text="Export FBMOD + audio companion. Apply in Frosty, close the game, then use FINISH FROSTY before playing.",Dock=DockStyle.Fill,ForeColor=HeatVisualTheme.Muted,Font=HeatVisualTheme.Ui(9)};
         openExports.Text="OPEN EXPORT FOLDER";openExports.Dock=DockStyle.Fill;
         openExports.Enabled=Directory.Exists(Path.Combine(workspace,"output","exports"));
         HeatVisualTheme.StyleButton(openExports);
@@ -183,7 +188,7 @@ internal sealed class HeatMusicInstallerV3 : Form
         panel.Controls.Add(new Label{Text="ACTIVITY LOG",Dock=DockStyle.Fill,ForeColor=HeatVisualTheme.Muted,Font=HeatVisualTheme.Ui(9,FontStyle.Bold)},0,5);
         log.BorderStyle=BorderStyle.None;log.Margin=Padding.Empty;
         panel.Controls.Add(log,0,6);panel.SetColumnSpan(log,3);
-        Append("V4.2 ready. Analyze your library or import a preset to begin.");
+        Append("V4.3 ready. Export the soundtrack, then complete the FINISH FROSTY workflow. The FBMOD alone is not playable.");
         FormClosing+=HandleFormClosing;
         Append("DURATION: no maximum track length is imposed. Long tracks remain subject to converter, file-size and integrity checks.");
         FormClosed+=(s,e)=>{notifier.Visible=false;notifier.Dispose();editor.Dispose();};
@@ -191,6 +196,7 @@ internal sealed class HeatMusicInstallerV3 : Form
 
     private void HandleFormClosing(object sender,FormClosingEventArgs e)
     {
+        if(frostyPanel.Busy){e.Cancel=true;if(!closeRequested&&MessageBox.Show(this,"Cancel at the next safe checkpoint and close? Existing game and Frosty profiles remain unchanged.","Close safely",MessageBoxButtons.YesNo)==DialogResult.Yes){frostyPanel.CancelSafely();closeRequested=true;}return;}
         if(presetBusy){e.Cancel=true;closeRequested=true;Append("Waiting for preset import/export to finish before closing safely.");return;}
         if(running==null)return;
         bool active;
@@ -226,6 +232,7 @@ internal sealed class HeatMusicInstallerV3 : Form
 
     private void Run(bool planOnly)
     {
+        if(frostyPanel.Busy||running!=null||presetBusy){MessageBox.Show(this,"Wait for the current operation to finish.");return;}
         if(!File.Exists(script)||!File.Exists(node)){MessageBox.Show(this,"Builder engine or Node.js not found.");return;}
         string selected=folder.Text.Trim();
         if(!Directory.Exists(selected)){MessageBox.Show(this,"Select an existing folder containing music.");return;}
@@ -243,7 +250,7 @@ internal sealed class HeatMusicInstallerV3 : Form
         }
         string logDir=Path.Combine(workspace,"output","installer-logs");
         Directory.CreateDirectory(logDir);
-        runLogPath=Path.Combine(logDir,"v4-2-"+DateTime.Now.ToString("yyyyMMdd-HHmmss-fff")+".log");
+        runLogPath=Path.Combine(logDir,"v4-3-"+DateTime.Now.ToString("yyyyMMdd-HHmmss-fff")+".log");
         lastReportJson=planOnly?null:lastReportJson;
         Status(planOnly?"Analyzing your music…":"Building a Frosty mod file…",true);
         cancelPath=runLogPath+".cancel";
@@ -273,6 +280,8 @@ internal sealed class HeatMusicInstallerV3 : Form
                 lastReportJson=a.Data.Substring("AUTO_PLAN_JSON ".Length);}
             if(a.Data.StartsWith("EXPORT_READY ",StringComparison.Ordinal))
                 BeginInvoke(new Action(()=>openExports.Enabled=true));
+            if(a.Data.StartsWith("COMPANION_READY ",StringComparison.Ordinal))
+                BeginInvoke(new Action(()=>frostyPanel.SelectBundle(a.Data.Substring("COMPANION_READY ".Length))));
             Append(a.Data);}};
         p.ErrorDataReceived+=(s,a)=>{if(a.Data!=null)Append("ERROR: "+a.Data);};
         p.EnableRaisingEvents=true;
@@ -282,11 +291,11 @@ internal sealed class HeatMusicInstallerV3 : Form
                 if(planOnly&&code==0&&!String.IsNullOrEmpty(lastReportJson))OpenEditor();
                 Append(closeRequested?"Cancellation completed. No builder processes remain running.":
                     code==0?(planOnly?"Analysis completed. Configure your music in the second tab.":
-                    "Export completed. Import the FBMOD in Frosty Mod Manager with your other mods, then launch from Frosty."):
+                    "Export completed. Import the FBMOD LAST in Frosty, generate the profile, close the game, then use FINISH FROSTY."):
                     "Processing failed (code "+code+"). No new export was produced.");
                 running=null;
                 if(!closeRequested)Notify(code==0?(planOnly?"Analysis complete":"Mod export complete"):"Processing failed",
-                    code==0?(planOnly?"Your playlists are ready to configure.":"Import the exported FBMOD in Frosty Mod Manager, enable your other mods, then launch from Frosty."):"Open the activity log for details.",code!=0);
+                    code==0?(planOnly?"Your playlists are ready to configure.":"Apply in Frosty, close the game, then use FINISH FROSTY before playing."):"Open the activity log for details.",code!=0);
                 p.Dispose();
                 if(closeRequested)Close();
             }));};
@@ -320,7 +329,7 @@ internal sealed class HeatMusicInstallerV3 : Form
     }
     private async void ExportPreset()
     {
-        if(presetBusy||running!=null||!editor.HasPlan)return;
+        if(presetBusy||running!=null||frostyPanel.Busy||!editor.HasPlan)return;
         string edited;
         try{edited=editor.Save();}catch(Exception ex){MessageBox.Show(this,ex.Message);return;}
         using(var dialog=new SaveFileDialog{Filter="Preset NFS Heat (*.heatpreset)|*.heatpreset",DefaultExt="heatpreset",
@@ -342,7 +351,7 @@ internal sealed class HeatMusicInstallerV3 : Form
     }
     private async void ImportPreset()
     {
-        if(presetBusy||running!=null)return;
+        if(presetBusy||running!=null||frostyPanel.Busy)return;
         using(var dialog=new OpenFileDialog{Filter="Preset NFS Heat (*.heatpreset)|*.heatpreset",CheckFileExists=true}){
             if(dialog.ShowDialog(this)!=DialogResult.OK)return;
             PresetBusy(true);Status("Importing and validating preset…",true);Append("Importing preset and checking audio integrity...");
