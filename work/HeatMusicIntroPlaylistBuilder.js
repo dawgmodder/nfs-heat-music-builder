@@ -320,7 +320,7 @@ async function main(){
         oldLocation:originalPatchToc.subarray(p,p+12).toString('hex'),
         audioFile:path.relative(folder,ea.file),audioBytes:ea.bytes,audioSha256:ea.sha256,
         seconds:ea.seconds,source,dropSeconds:drop});
-      lines.push([row.assetName,ea.bytes,ea.seconds].join('\t'));
+      lines.push([row.assetName,ea.bytes,ea.seconds,path.relative(folder,ea.file).replace(/\\/g,'/')].join('\t'));
       continue;
     }
     if(!toc.subarray(p,p+12).equals(originalToc.subarray(p,p+12)))
@@ -333,7 +333,7 @@ async function main(){
     manifest.placements.push({name:row.assetName,layer:'Data',tocOffset:p,cas:8,
       newOffset:cursor,newSize:wrapped.length,audioBytes:ea.bytes,
       audioSha256:ea.sha256,seconds:ea.seconds,source,dropSeconds:drop});
-    cursor+=wrapped.length;lines.push([row.assetName,ea.bytes,ea.seconds].join('\t'));}
+    cursor+=wrapped.length;lines.push([row.assetName,ea.bytes,ea.seconds,path.relative(folder,ea.file).replace(/\\/g,'/')].join('\t'));}
   fs.writeFileSync(path.join(folder,'chunks0.toc'),toc);
   fs.appendFileSync(path.join(folder,'waves.tsv'),lines.join('\n')+'\n');
   manifest.casBytes[8]=cursor;manifest.tocSha256=sha(toc);
@@ -349,10 +349,10 @@ async function main(){
   require('./RunHeatMetadata').runMetadata(metadataBuilder,['dynamicallintro',path.join(folder,'waves.tsv'),
     path.join(folder,manifest.metadataFile)],{cwd:root});
   await streamRun(process.execPath,[path.join(__dirname,'VerifyPreparedHeatMusicIntroPlaylists.js'),folder],120000);
-  console.log('PREPARED_INTRO_PLAYLIST',folder,'192 Data + 7 Patch');
+  console.log('PREPARED_INTRO_PLAYLIST',folder,'192 Data + 7 Patch audio resources embedded in FBMOD');
   if(process.argv.includes('--prepare-only'))return;
   checkCancellation();
-  await streamRun(process.execPath,[path.join(__dirname,'InstallPreparedHeatMusic.js'),folder],1500000);
+  await streamRun(process.execPath,[path.join(__dirname,'ExportPreparedHeatMusic.js'),folder],120000);
 }
 if(require.main===module)main().catch(e=>{console.error('ERROR:',e.stack||e.message);process.exitCode=1;});
 module.exports={encode,normalize};

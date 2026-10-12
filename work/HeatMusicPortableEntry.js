@@ -21,7 +21,7 @@ function run(script,args){return new Promise((resolve,reject)=>{
 (async()=>{
   if(!fs.existsSync(path.join(root,'output','playlist-placements.json')))
     throw new Error('Context data missing from package');
-  await run('HeatMusicPortableSetup.js',install?['--install']:[]);
+  await run('HeatMusicPortableSetup.js',[]);
   if(install){
     const report=require('./HeatMusicGameAudit').audit(process.env.HEAT_MUSIC_GAME,root);
     fs.writeFileSync(path.join(root,'output','game-audit-v326.json'),JSON.stringify(report,null,2));

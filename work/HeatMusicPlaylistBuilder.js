@@ -287,7 +287,7 @@ async function main() {
   manifest.playlists=Object.fromEntries(slots.map(key=>[key,sources[key]]));
   const waveFile=path.join(folder,'waves.tsv');
   fs.appendFileSync(waveFile,extras.map(w=>{const ea=encoded.get(assignment.get(w.name.toLowerCase()));
-    return [w.name,ea.bytes,ea.seconds].join('\t');}).join('\n')+'\n');
+    return [w.name,ea.bytes,ea.seconds,path.relative(folder,ea.file).replace(/\\/g,'/')].join('\t');}).join('\n')+'\n');
   manifest.metadataFile='playlist-metadata.fbmod';
   fs.writeFileSync(manifestFile,JSON.stringify(manifest,null,2));
   console.log('BUILDING_FULL_PLAYLIST_METADATA',manifest.placements.length,'Data placements + 1 Patch placement');

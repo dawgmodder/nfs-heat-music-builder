@@ -328,7 +328,8 @@ fs.writeFileSync(generatedToc,toc,{flag:'wx'});
 for(const casNumber of [8,13,14])
   if(fs.statSync(casOutputs[casNumber]).size!==cursors[casNumber]) throw new Error('CAS size mismatch '+casNumber);
 const waves=path.join(folder,'waves.tsv');
-fs.writeFileSync(waves,placements.map(item=>[item.name,item.ea.bytes,item.ea.seconds].join('\t')).join('\n')+'\n',{flag:'wx'});
+fs.writeFileSync(waves,placements.map(item=>[item.name,item.ea.bytes,item.ea.seconds,
+  path.relative(folder,item.ea.file).replace(/\\/g,'/')].join('\t')).join('\n')+'\n',{flag:'wx'});
 const manifest={id:buildId,slots:config.slots,actualMenuSource:menuSource,
   menuSegments:{mode:'intro-once-loop-remainder',leadSeconds:slotAudio.menuLead.seconds,
     loopStartSeconds:menuLoopStart,loopSeconds:slotAudio.menuLoop.seconds},
