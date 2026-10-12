@@ -129,14 +129,6 @@ async function main(){
   }
   checkCancellation();
   run(process.execPath,[path.join(__dirname,'ExtractOwnedGameKey.js')],300000);
-  run(path.join(__dirname,'CreateNoLaunchFrostySupport.exe'),[root],300000);
-  run(path.join(__dirname,'ApplyHeatTrack24Size.exe'),['ready'],300000);
-  const baseline=path.join(paths.game,'ModData','HeatTrack24RaceIntroAudioTest');
-  const args=[paths.game,path.join(root,'output'),baseline];
-  if(process.argv.includes('--install')){
-    if(!fs.existsSync(baseline))run(process.execPath,[path.join(__dirname,'BuildPortableBaseline.js'),...args],900000);
-    else console.log('BASELINE_EXISTS',baseline);
-  }else run(process.execPath,[path.join(__dirname,'BuildPortableBaseline.js'),...args,'--verify-only'],300000);
   console.log('PORTABLE_SETUP_READY');
 }
 main().catch(error=>{console.error('ERROR:',error.stack||error.message);process.exitCode=1;});

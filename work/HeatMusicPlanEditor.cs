@@ -122,7 +122,7 @@ internal sealed class HeatMusicPlanEditor : UserControl
         player.Controls.Add(bar,0,2);layout.Controls.Add(player,0,2);
         var footer=new FlowLayoutPanel{Dock=DockStyle.Fill,WrapContents=false};
         save.Text="SAVE SETTINGS";save.Width=150;save.Height=30;HeatVisualTheme.StyleButton(save,true);
-        save.Click+=(s,e)=>{try{Save();MessageBox.Show(this,"Settings saved. Use 'Normalize and install' in the first tab.");}
+        save.Click+=(s,e)=>{try{Save();MessageBox.Show(this,"Settings saved. Use 'Build and export mod' in the first tab.");}
             catch(Exception ex){MessageBox.Show(this,ex.Message,"Invalid plan",MessageBoxButtons.OK,MessageBoxIcon.Warning);}};
         footer.Controls.Add(save);
         message.AutoSize=true;message.Text="Analyze a folder or import a preset to begin.";

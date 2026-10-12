@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
@@ -111,9 +112,11 @@ internal static class HeatTrack24SizeMod
         }
         uint[] dynamicBytes = new uint[19];
         float[] dynamicSeconds = new float[19];
+        string[] dynamicAudioFiles = new string[19];
         if (dynamicBuild)
         {
-            string[] lines = File.ReadAllLines(Path.GetFullPath(args[1]));
+            string waveSpecFile = Path.GetFullPath(args[1]);
+            string[] lines = File.ReadAllLines(waveSpecFile);
             if (lines.Length < 19 || lines.Length > (dynamicAllIntro ? 256 : 100))
                 throw new InvalidDataException("Unexpected dynamic wave specification count");
             int originalCount = waveNames.Length;
@@ -121,10 +124,11 @@ internal static class HeatTrack24SizeMod
             Array.Resize(ref waveSeconds, lines.Length);
             Array.Resize(ref dynamicBytes, lines.Length);
             Array.Resize(ref dynamicSeconds, lines.Length);
+            Array.Resize(ref dynamicAudioFiles, lines.Length);
             for (int i = 0; i < lines.Length; i++)
             {
                 string[] fields = lines[i].Split('\t');
-                if (fields.Length != 3 || (i < originalCount &&
+                if ((dynamicAllIntro ? fields.Length != 4 : (fields.Length != 3 && fields.Length != 4)) || (i < originalCount &&
                     !String.Equals(fields[0], waveNames[i], StringComparison.OrdinalIgnoreCase)) ||
                     (i >= originalCount && !fields[0].StartsWith("Audio/Music/Roboto/Playlist/", StringComparison.OrdinalIgnoreCase) &&
                      !(dynamicAllIntro && fields[0].StartsWith("Audio/Music/Roboto/RaceIntros/", StringComparison.OrdinalIgnoreCase))))
@@ -134,6 +138,17 @@ internal static class HeatTrack24SizeMod
                 dynamicSeconds[i] = float.Parse(fields[2], CultureInfo.InvariantCulture);
                 if (dynamicBytes[i] < 24 || float.IsNaN(dynamicSeconds[i]) || float.IsInfinity(dynamicSeconds[i]) || dynamicSeconds[i] < 1 || (double)dynamicSeconds[i] * 48000 > 0x3fffffff)
                     throw new InvalidDataException("Dynamic wave size/duration out of range at " + i);
+                if (dynamicAllIntro)
+                {
+                    string buildRoot = Path.GetFullPath(Path.GetDirectoryName(waveSpecFile)).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                    string audioFile = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(waveSpecFile), fields[3]));
+                    if (!audioFile.StartsWith(buildRoot, StringComparison.OrdinalIgnoreCase) || !File.Exists(audioFile))
+                        throw new InvalidDataException("Audio file is missing or outside the prepared build at " + i);
+                    FileInfo audioInfo = new FileInfo(audioFile);
+                    if (audioInfo.Length != dynamicBytes[i])
+                        throw new InvalidDataException("Audio byte count does not match wave specification at " + i);
+                    dynamicAudioFiles[i] = audioFile;
+                }
             }
         }
         Environment.CurrentDirectory = Runtime;
@@ -156,6 +171,8 @@ internal static class HeatTrack24SizeMod
         App.AssetManager.Initialize(true, new AssetManagerImportResult());
 
         if (File.Exists(output)) throw new InvalidOperationException("Output already exists: " + output);
+        HashSet<Guid> modifiedAudioChunks = new HashSet<Guid>();
+        Dictionary<Guid, byte[]> audioChunkPayloads = new Dictionary<Guid, byte[]>();
         for (int waveIndex = 0; waveIndex < waveNames.Length; waveIndex++)
         {
             string name = waveNames[waveIndex];
@@ -209,6 +226,32 @@ internal static class HeatTrack24SizeMod
             Array.Copy(BitConverter.GetBytes(newSize), 0, dataBytes, 976, 4);
             App.AssetManager.ModifyRes(resource.ResRid, dataBytes, resource.ResMeta);
             entry.LinkAsset(resource);
+            if (dynamicAllIntro)
+            {
+                Guid chunkId = (Guid)chunk.GetType().GetProperty("ChunkId").GetValue(chunk, null);
+                byte[] audioBytes = File.ReadAllBytes(dynamicAudioFiles[waveIndex]);
+                byte[] priorPayload;
+                if (audioChunkPayloads.TryGetValue(chunkId, out priorPayload))
+                {
+                    if (priorPayload.Length != audioBytes.Length)
+                        throw new InvalidDataException("Two wave assets assign different audio sizes to chunk " + chunkId);
+                    for (int byteIndex = 0; byteIndex < audioBytes.Length; byteIndex++)
+                        if (priorPayload[byteIndex] != audioBytes[byteIndex])
+                            throw new InvalidDataException("Two wave assets assign different audio to chunk " + chunkId);
+                }
+                else
+                {
+                    ChunkAssetEntry audioEntry = App.AssetManager.GetChunkEntry(chunkId);
+                    if (audioEntry == null) throw new InvalidDataException("Audio chunk is missing: " + chunkId);
+                    if (!App.AssetManager.ModifyChunk(chunkId, audioBytes))
+                        throw new InvalidDataException("Frosty rejected audio chunk: " + chunkId);
+                    entry.LinkAsset(audioEntry);
+                    audioChunkPayloads.Add(chunkId, audioBytes);
+                    modifiedAudioChunks.Add(chunkId);
+                    Console.WriteLine("AUDIO_CHUNK " + chunkId + " " + audioBytes.Length + " bytes " +
+                        Path.GetFileName(dynamicAudioFiles[waveIndex]));
+                }
+            }
             Console.WriteLine("WAVE " + name + " duration " + originalSeconds + " -> " + newSeconds +
                 ", bytes " + oldSize + " -> " + newSize);
         }
@@ -265,7 +308,7 @@ internal static class HeatTrack24SizeMod
         settings.Author = "Codex / local user";
         settings.Version = "0.1";
         settings.Description = dynamicAllIntro ? "Dynamic metadata for all licensed playlists and all twenty-one original race-intro sequences. The game's original race-intro selection remains intact. Audio is supplied by a separate ModData overlay."
-            : dynamicBuild ? "Dynamic NewWaveAsset/NewWaveResource metadata for nineteen chosen context chunks, with one selected day intro and one selected night intro. Audio is supplied by a separate ModData overlay."
+            : dynamicBuild ? "Dynamic NewWaveAsset/NewWaveResource metadata for selected context chunks. Audio is supplied by the prepared audio overlay."
             : firstBatch ? "Isolated first batch: Track 1 in LIITA day free drive and Track 2 in Logic night free drive; Track 24 remains in menu, garage, generic race slots and forced day-night intros. Audio is supplied by a separate overlay."
             : forceIntro ? "Isolated test: menu, five contexts, and one Track 24 intro selected for every day or night race. The selected intro's six audio chunks are replaced."
             : raceIntro ? "Five original contexts, menu lead and loop, plus all six audio chunks for each of the selected day and night race intros. No music graph redirect."
@@ -281,7 +324,7 @@ internal static class HeatTrack24SizeMod
             if (!reader.IsValid || reader.GameVersion != App.FileSystem.Head) throw new InvalidDataException("Exported mod failed validation");
             reader.ReadModDetails();
             BaseModResource[] resources = reader.ReadResources();
-            int ebxCount = 0, resCount = 0;
+            int ebxCount = 0, resCount = 0, chunkCount = 0;
             foreach (BaseModResource resource in resources)
             {
                 if (resource.Type == ModResourceType.Ebx)
@@ -294,12 +337,21 @@ internal static class HeatTrack24SizeMod
                     resCount++;
                     Console.WriteLine("RES " + resource.Name);
                 }
+                else if (resource.Type == ModResourceType.Chunk)
+                {
+                    chunkCount++;
+                    Guid chunkId;
+                    if (!Guid.TryParse(resource.Name, out chunkId) || !modifiedAudioChunks.Contains(chunkId))
+                        throw new InvalidDataException("Unexpected audio chunk in exported mod: " + resource.Name);
+                }
                 else if (resource.Type != ModResourceType.Embedded)
                     throw new InvalidDataException("Unexpected mod resource: " + resource.Type);
             }
             if (ebxCount != waveNames.Length + (dynamicAllIntro ? 1 : 0) + (menuTest ? 1 : 0) + ((forceIntro || firstBatch || dynamicBuild) && !dynamicAllIntro ? 2 : 0) || resCount != waveNames.Length)
                 throw new InvalidDataException("Unexpected EBX/RES count: " + ebxCount + "/" + resCount);
-            Console.WriteLine("OUTPUT " + output + " EBX=" + ebxCount + " RES=" + resCount);
+            if (dynamicAllIntro && chunkCount != modifiedAudioChunks.Count)
+                throw new InvalidDataException("Exported chunk count does not match modified audio chunks: " + chunkCount + "/" + modifiedAudioChunks.Count);
+            Console.WriteLine("OUTPUT " + output + " EBX=" + ebxCount + " RES=" + resCount + " CHUNK=" + chunkCount);
         }
         return 0;
     }

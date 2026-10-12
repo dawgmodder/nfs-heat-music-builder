@@ -23,7 +23,6 @@ const ffprobe = paths.ffprobe;
 const converterDir = paths.converterDir;
 const converter = paths.converter;
 const metadataBuilder = path.resolve(__dirname, 'HeatTrack24SizeMod.exe');
-const metadataApplier = path.resolve(__dirname, 'ApplyHeatTrack24Size.exe');
 const eaDecoder = path.resolve(__dirname, 'DecodeOriginalEaForLoudness.exe');
 const configPath = process.argv[2] ? path.resolve(process.argv[2]) : null;
 const prepareOnly = process.argv.includes('--prepare-only');
@@ -101,7 +100,7 @@ if(!config.slots || requiredSlots.some(slot=>typeof config.slots[slot]!=='string
   throw new Error('All eight source files must exist');
 for(const field of ['dropDaySeconds','dropNightSeconds'])
   if(!Number.isFinite(config[field]) || config[field]<10 || config[field]>600) throw new Error('Invalid '+field);
-for(const file of [ffmpeg,ffprobe,converter,metadataBuilder,metadataApplier,eaDecoder,
+for(const file of [ffmpeg,ffprobe,converter,metadataBuilder,eaDecoder,
   path.join(baseline,'Data','Win32','chunks0.toc')])
   if(!fs.existsSync(file)) throw new Error('Required local tool or tested baseline missing: '+file);
 const buildId=resumeIndex>=0 ? path.basename(process.argv[resumeIndex+1]) :
@@ -328,7 +327,8 @@ fs.writeFileSync(generatedToc,toc,{flag:'wx'});
 for(const casNumber of [8,13,14])
   if(fs.statSync(casOutputs[casNumber]).size!==cursors[casNumber]) throw new Error('CAS size mismatch '+casNumber);
 const waves=path.join(folder,'waves.tsv');
-fs.writeFileSync(waves,placements.map(item=>[item.name,item.ea.bytes,item.ea.seconds].join('\t')).join('\n')+'\n',{flag:'wx'});
+fs.writeFileSync(waves,placements.map(item=>[item.name,item.ea.bytes,item.ea.seconds,
+  path.relative(folder,item.ea.file).replace(/\\/g,'/')].join('\t')).join('\n')+'\n',{flag:'wx'});
 const manifest={id:buildId,slots:config.slots,actualMenuSource:menuSource,
   menuSegments:{mode:'intro-once-loop-remainder',leadSeconds:slotAudio.menuLead.seconds,
     loopStartSeconds:menuLoopStart,loopSeconds:slotAudio.menuLoop.seconds},
