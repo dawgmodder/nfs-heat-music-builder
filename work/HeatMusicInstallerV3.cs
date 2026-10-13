@@ -18,7 +18,7 @@ internal sealed class HeatMusicInstallerV3 : Form
     private readonly Button savePreset=new Button(),loadPreset=new Button();
         private readonly TabControl tabs = new HeatNavigationTabs();
     private readonly HeatMusicPlanEditor editor;
-    private readonly HeatMusicFrostyPanel frostyPanel;
+    private readonly HeatMusicModManagerPanel frostyPanel;
     private readonly string workspace,script,node;
     private readonly bool portable;
     private string lastReportJson,runLogPath,cancelPath;
@@ -53,7 +53,7 @@ internal sealed class HeatMusicInstallerV3 : Form
         editor=new HeatMusicPlanEditor();
         script=Path.Combine(workspace,"work",portable?"HeatMusicPortableEntry.js":"HeatMusicAutoPlanner.js");
         node=portable?Path.Combine(workspace,"runtime","node.exe"):@"C:\Program Files\nodejs\node.exe";
-        Text="NFS Heat — Music Builder V4.3";
+        Text="NFS Heat — Music Builder V5 Preview";
         Icon=HeatMusicBrand.CreateIcon();notifier.Icon=Icon;notifier.Text="Heat Music Builder 4";
         notifier.BalloonTipClicked+=(s,e)=>{Show();WindowState=FormWindowState.Normal;Activate();};
         notifier.DoubleClick+=(s,e)=>{Show();WindowState=FormWindowState.Normal;Activate();};
@@ -84,9 +84,9 @@ internal sealed class HeatMusicInstallerV3 : Form
         presetBar.Controls.Add(new Label{Text="Music, settings and available conversions",AutoSize=true,Margin=new Padding(10,9,0,0)});
         editTab.Controls.Add(presetBar);
         tabs.TabPages.Add(installTab);tabs.TabPages.Add(editTab);
-        frostyPanel=new HeatMusicFrostyPanel(workspace,node,()=>gameFolder.Text.Trim(),()=>running!=null||presetBusy,Notify);
+        frostyPanel=new HeatMusicModManagerPanel(workspace,node,()=>gameFolder.Text.Trim(),Notify);
         frostyPanel.Finished+=()=>{if(closeRequested)Close();};
-        var frostyTab=new TabPage("Finish Frosty"){BackColor=HeatVisualTheme.Asphalt};frostyTab.Controls.Add(frostyPanel);tabs.TabPages.Add(frostyTab);
+        var frostyTab=new TabPage("Mods & Launch"){BackColor=HeatVisualTheme.Asphalt};frostyTab.Controls.Add(frostyPanel);tabs.TabPages.Add(frostyTab);
         var shell=new Panel{Dock=DockStyle.Fill,BackColor=HeatVisualTheme.Void};
         var statusBar=new Panel{Dock=DockStyle.Bottom,Height=46,Padding=new Padding(20,8,20,8),BackColor=HeatVisualTheme.Panel};
         statusBar.Controls.Add(activity);statusBar.Controls.Add(notifications);statusBar.Controls.Add(progress);
@@ -104,7 +104,7 @@ internal sealed class HeatMusicInstallerV3 : Form
         tabs.SelectedIndexChanged+=(s,e)=>updateNavigation();updateNavigation();
         Shown+=(s,e)=>updateNavigation();
         navigation.Controls.Add(navInstall);navigation.Controls.Add(navLibrary);
-        var navFrosty=new Button{Text="FINISH FROSTY",Width=180,Height=38};HeatVisualTheme.StyleButton(navFrosty);navFrosty.Click+=(s,e)=>tabs.SelectedIndex=2;navigation.Controls.Add(navFrosty);
+        var navFrosty=new Button{Text="MODS & LAUNCH",Width=180,Height=38};HeatVisualTheme.StyleButton(navFrosty);navFrosty.Click+=(s,e)=>tabs.SelectedIndex=2;navigation.Controls.Add(navFrosty);
         shell.Controls.Add(tabs);shell.Controls.Add(statusBar);shell.Controls.Add(navigation);shell.Controls.Add(new HeatHeaderPanel());Controls.Add(shell);
         var gameLabel=new Label{Text="NFS Heat folder (Steam/EA App)",Dock=DockStyle.Fill,
             TextAlign=ContentAlignment.MiddleLeft};
@@ -279,9 +279,7 @@ internal sealed class HeatMusicInstallerV3 : Form
             if(a.Data.StartsWith("AUTO_PLAN_JSON ",StringComparison.Ordinal)){
                 lastReportJson=a.Data.Substring("AUTO_PLAN_JSON ".Length);}
             if(a.Data.StartsWith("EXPORT_READY ",StringComparison.Ordinal))
-                BeginInvoke(new Action(()=>openExports.Enabled=true));
-            if(a.Data.StartsWith("COMPANION_READY ",StringComparison.Ordinal))
-                BeginInvoke(new Action(()=>frostyPanel.SelectBundle(a.Data.Substring("COMPANION_READY ".Length))));
+                BeginInvoke(new Action(()=>{openExports.Enabled=true;frostyPanel.SelectSoundtrack(a.Data.Substring("EXPORT_READY ".Length));}));
             Append(a.Data);}};
         p.ErrorDataReceived+=(s,a)=>{if(a.Data!=null)Append("ERROR: "+a.Data);};
         p.EnableRaisingEvents=true;
