@@ -1,5 +1,9 @@
 # NFS Heat Music Builder
 
+## V5 development branch
+
+V5 is migrating mod application to the current GPLv3 Frosty pipeline so a soundtrack FBMOD can share one load order and one Launch action with UNITE and other mods. See [frostygpl/README.md](frostygpl/README.md) for the pinned upstream revision, reproducible patch, license obligations, and verified integration status.
+
 Independent community tool. Not affiliated with or endorsed by EA.
 
 ## V4.3: official Frosty companion (integration candidate)

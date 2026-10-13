@@ -1,0 +1,227 @@
+diff --git a/FrostyCli/Program.cs b/FrostyCli/Program.cs
+index 522761d..2b9d462 100644
+--- a/FrostyCli/Program.cs
++++ b/FrostyCli/Program.cs
+@@ -215,31 +215,18 @@ internal static partial class Program
+             return false;
+         }
+ 
+-        // generate sdk if needed
+-        if (!File.Exists(ProfilesLibrary.SdkPath))
++        // Applying already compiled mods does not deserialize EBX objects, so it can
++        // operate without a generated type SDK. Editor/project operations still need it.
++        if (File.Exists(ProfilesLibrary.SdkPath))
+         {
+-            int pid = inPid ?? Prompt.Input<int>("Input pid of the currently running game");
+-
+-            TypeSdkGenerator typeSdkGenerator = new();
+-
+-            using Process process = Process.GetProcessById(pid);
+-
+-            if (!typeSdkGenerator.DumpTypes(process))
+-            {
+-                return false;
+-            }
+-
+-            Logger.LogInfoInternal("The game is not needed anymore and can be closed.");
+-            if (!typeSdkGenerator.CreateSdk(ProfilesLibrary.SdkPath))
++            if (!TypeLibrary.Initialize())
+             {
+                 return false;
+             }
+         }
+-
+-        // init type library, this loads the EbxTypeSdk used to properly parse ebx assets
+-        if (!TypeLibrary.Initialize())
++        else
+         {
+-            return false;
++            Logger.LogInfoInternal("Type SDK not present; continuing in compiled-mod apply mode.");
+         }
+ 
+         // init resource manager, this parses the cas.cat files if they exist for easy asset lookup
+@@ -330,4 +317,4 @@ internal static partial class Program
+ 
+         return retVal;
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/FrostyModSupport/Archive/InstallChunkWriter.cs b/FrostyModSupport/Archive/InstallChunkWriter.cs
+index 3c21afa..53854ca 100644
+--- a/FrostyModSupport/Archive/InstallChunkWriter.cs
++++ b/FrostyModSupport/Archive/InstallChunkWriter.cs
+@@ -23,6 +23,7 @@ public class InstallChunkWriter : IDisposable
+     private readonly Dictionary<Sha1, (CasFileIdentifier, uint, uint)> m_data = new();
+     private DataStream? m_currentStream;
+ 
++
+     public InstallChunkWriter(InstallChunkInfo inInstallChunk, string inGamePatchPath, string inModDataPath, bool inIsPatch)
+     {
+         m_installChunk = inInstallChunk;
+@@ -41,7 +42,7 @@ public class InstallChunkWriter : IDisposable
+             {
+                 int index = int.Parse(Path.GetFileName(file).AsSpan()[4..][..^4]);
+                 m_casIndex = Math.Max(index, m_casIndex);
+-                File.CreateSymbolicLink(Path.Combine(m_dir, $"cas_{index:D2}.cas"), file);
++                FileSystemLinker.LinkFile(Path.Combine(m_dir, $"cas_{index:D2}.cas"), file);
+             }
+         }
+ 
+@@ -202,4 +203,4 @@ public class InstallChunkWriter : IDisposable
+     {
+         m_currentStream?.Dispose();
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/FrostyModSupport/FileSystemLinker.cs b/FrostyModSupport/FileSystemLinker.cs
+new file mode 100644
+index 0000000..4058596
+--- /dev/null
++++ b/FrostyModSupport/FileSystemLinker.cs
+@@ -0,0 +1,63 @@
++using System;
++using System.IO;
++using System.Runtime.InteropServices;
++
++namespace Frosty.ModSupport;
++
++internal static class FileSystemLinker
++{
++    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
++    [return: MarshalAs(UnmanagedType.Bool)]
++    private static extern bool CreateHardLinkW(string newFileName, string existingFileName, IntPtr securityAttributes);
++
++    public static void LinkFile(string destination, string source)
++    {
++        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
++        if (File.Exists(destination))
++        {
++            return;
++        }
++
++        if (OperatingSystem.IsWindows() && CreateHardLinkW(destination, source, IntPtr.Zero))
++        {
++            return;
++        }
++
++        try
++        {
++            File.CreateSymbolicLink(destination, source);
++        }
++        catch (IOException)
++        {
++            File.Copy(source, destination, false);
++        }
++    }
++
++    public static void LinkDirectory(string destination, string source)
++    {
++        if (Directory.Exists(destination))
++        {
++            return;
++        }
++
++        try
++        {
++            Directory.CreateSymbolicLink(destination, source);
++            return;
++        }
++        catch (IOException)
++        {
++            Directory.CreateDirectory(destination);
++        }
++
++        foreach (string directory in Directory.EnumerateDirectories(source, "*", SearchOption.AllDirectories))
++        {
++            Directory.CreateDirectory(Path.Combine(destination, Path.GetRelativePath(source, directory)));
++        }
++
++        foreach (string file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
++        {
++            LinkFile(Path.Combine(destination, Path.GetRelativePath(source, file)), file);
++        }
++    }
++}
+diff --git a/FrostyModSupport/FrostyModExecutor.cs b/FrostyModSupport/FrostyModExecutor.cs
+index c64b86b..4f7fa20 100644
+--- a/FrostyModSupport/FrostyModExecutor.cs
++++ b/FrostyModSupport/FrostyModExecutor.cs
+@@ -247,8 +247,7 @@ public partial class FrostyModExecutor
+             string modPath = Path.Combine(m_modDataPath, Path.GetRelativePath(m_gamePatchPath, file));
+             if (!File.Exists(modPath))
+             {
+-                Directory.CreateDirectory(Directory.GetParent(modPath)!.FullName);
+-                File.CreateSymbolicLink(modPath, file);
++                FileSystemLinker.LinkFile(modPath, file);
+             }
+         }
+ 
+@@ -256,7 +255,7 @@ public partial class FrostyModExecutor
+         string shaderCache = Path.Combine(FileSystemManager.BasePath, "shader_cache");
+         if (Directory.Exists(shaderCache))
+         {
+-            Directory.CreateSymbolicLink(Path.Combine(inModPackPath, "shader_cache"), shaderCache);
++            FileSystemLinker.LinkDirectory(Path.Combine(inModPackPath, "shader_cache"), shaderCache);
+         }
+ 
+         if (FileSystemManager.Sources.Count > 1)
+@@ -267,14 +266,13 @@ public partial class FrostyModExecutor
+                 if (source.Path != m_patchPath)
+                 {
+                     string destPath = Path.Combine(inModPackPath, source.Path);
+-                    Directory.CreateDirectory(Directory.GetParent(destPath)!.FullName);
+-                    Directory.CreateSymbolicLink(destPath,
++                    FileSystemLinker.LinkDirectory(destPath,
+                         Path.Combine(FileSystemManager.BasePath, source.Path));
+                 }
+ 
+                 if (source.Path != FileSystemSource.Base.Path && source.Path.Contains("Data"))
+                 {
+-                    File.CreateSymbolicLink(
++                    FileSystemLinker.LinkFile(
+                         Path.Combine(inModPackPath, source.Path.Replace("/Data", string.Empty),
+                             "package.mft"),
+                         Path.Combine(FileSystemManager.BasePath, source.Path.Replace("/Data", string.Empty),
+@@ -777,4 +775,4 @@ public partial class FrostyModExecutor
+ 
+         throw new Exception();
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/FrostyModSupport/SuperBundleActions/Dynamic2018.cs b/FrostyModSupport/SuperBundleActions/Dynamic2018.cs
+index dab9ecc..cc86055 100644
+--- a/FrostyModSupport/SuperBundleActions/Dynamic2018.cs
++++ b/FrostyModSupport/SuperBundleActions/Dynamic2018.cs
+@@ -896,9 +896,9 @@ public partial class FrostyModExecutor
+                 string sbPath = tocPath.Replace(".toc", ".sb");
+                 if (File.Exists(sbPath))
+                 {
+-                    File.CreateSymbolicLink(modifiedToc.FullName.Replace(".toc", ".sb"), sbPath);
++                    FileSystemLinker.LinkFile(modifiedToc.FullName.Replace(".toc", ".sb"), sbPath);
+                 }
+             }
+         }
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/FrostyModSupport/SuperBundleActions/Manifest2019.cs b/FrostyModSupport/SuperBundleActions/Manifest2019.cs
+index cc31b76..d3834b7 100644
+--- a/FrostyModSupport/SuperBundleActions/Manifest2019.cs
++++ b/FrostyModSupport/SuperBundleActions/Manifest2019.cs
+@@ -798,9 +798,9 @@ public partial class FrostyModExecutor
+                 string sbPath = tocPath.Replace(".toc", ".sb");
+                 if (File.Exists(sbPath))
+                 {
+-                    File.CreateSymbolicLink(modifiedToc.FullName.Replace(".toc", ".sb"), sbPath);
++                    FileSystemLinker.LinkFile(modifiedToc.FullName.Replace(".toc", ".sb"), sbPath);
+                 }
+             }
+         }
+     }
+-}
+\ No newline at end of file
++}
