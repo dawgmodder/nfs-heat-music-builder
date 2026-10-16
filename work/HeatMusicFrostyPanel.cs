@@ -27,7 +27,7 @@ internal sealed class HeatMusicFrostyPanel : UserControl
         var layout=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=2,RowCount=7,Padding=new Padding(28)};
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,180));
         foreach(int h in new[]{44,132,50,50,56,32})layout.RowStyles.Add(new RowStyle(SizeType.Absolute,h));layout.RowStyles.Add(new RowStyle(SizeType.Percent,100));
-        var title=new Label{Text="Finish your Frosty setup",Dock=DockStyle.Fill,Font=HeatVisualTheme.Ui(22,FontStyle.Bold)};
+        var title=new Label{Text="Legacy Frosty export",Dock=DockStyle.Fill,Font=HeatVisualTheme.Ui(22,FontStyle.Bold)};
         layout.Controls.Add(title,0,0);layout.SetColumnSpan(title,2);
         var instructions=new Label{Dock=DockStyle.Fill,ForeColor=HeatVisualTheme.Muted,Text="1. Import the exported FBMOD into official Frosty Mod Manager. Apply your other mods, then this soundtrack LAST.\n2. Click Launch in Frosty to generate the selected profile. If the game opens, close it without playing.\n3. Select soundtrack.heatmusic from the exported .music folder and the Frosty ModData profile folder.\n4. Finalize, then launch below. Repeat finalization whenever the Frosty mod selection changes.\nFrosty, its profile and the original game files remain unchanged. A separate combined profile is created."};
         layout.Controls.Add(instructions,0,1);layout.SetColumnSpan(instructions,2);

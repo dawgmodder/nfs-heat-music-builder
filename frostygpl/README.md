@@ -28,4 +28,6 @@ The current prototype applied these four mods in one ordered profile:
 
 The isolated output contained all 199 soundtrack replacements with zero original pointers, zero missing Patch entries, zero invalid CAS locations, and zero wrong-catalog matches. This proves combined profile generation; it is not yet a claim that the game was launched or played.
 
-The old soundtrack FBMOD stores audio blocks compressed by the legacy Frosty Oodle codec. Their block structure and decompressed-size totals validate, but the newer OodleUE runtime cannot safely decode those legacy blocks for offline hash comparison. The pipeline therefore preserves those payload bytes instead of recompressing them.
+The first offline audit incorrectly passed the complete remainder of each CAS file to `Cas.DecompressData`. Because the decoder reads to the end of its stream, it crossed the selected resource boundary and could fail with an access violation. The corrected auditor copies exactly the validated `offset + compressed size` range into a bounded `BlockStream` before decoding.
+
+With that correction, all **199 of 199** soundtrack resources in the generated UNITE + music profile decompressed successfully and matched their expected SHA-256 hashes (`Errors = 0`). The reusable auditor source is in [`FrostyPayloadAudit`](FrostyPayloadAudit); copy that directory beside `FrostySdk` in the pinned Frosty checkout to build it. This proves payload integrity of the generated profile, but it remains separate from in-game playback testing.

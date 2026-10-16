@@ -178,7 +178,7 @@ internal sealed class HeatMusicInstallerV3 : Form
         analyze.Margin=new Padding(0,0,12,0);install.Margin=new Padding(0);
         actions.Controls.Add(analyze,0,0);actions.Controls.Add(install,1,0);
         panel.Controls.Add(actions,0,3);panel.SetColumnSpan(actions,3);
-        var safety=new Label{Text="Export FBMOD + audio companion. Apply in Frosty, close the game, then use FINISH FROSTY before playing.",Dock=DockStyle.Fill,ForeColor=HeatVisualTheme.Muted,Font=HeatVisualTheme.Ui(9)};
+        var safety=new Label{Text="Build one soundtrack FBMOD, then combine it with an FBPACK or individual mods under MODS & LAUNCH.",Dock=DockStyle.Fill,ForeColor=HeatVisualTheme.Muted,Font=HeatVisualTheme.Ui(9)};
         openExports.Text="OPEN EXPORT FOLDER";openExports.Dock=DockStyle.Fill;
         openExports.Enabled=Directory.Exists(Path.Combine(workspace,"output","exports"));
         HeatVisualTheme.StyleButton(openExports);
@@ -188,7 +188,7 @@ internal sealed class HeatMusicInstallerV3 : Form
         panel.Controls.Add(new Label{Text="ACTIVITY LOG",Dock=DockStyle.Fill,ForeColor=HeatVisualTheme.Muted,Font=HeatVisualTheme.Ui(9,FontStyle.Bold)},0,5);
         log.BorderStyle=BorderStyle.None;log.Margin=Padding.Empty;
         panel.Controls.Add(log,0,6);panel.SetColumnSpan(log,3);
-        Append("V4.3 ready. Export the soundtrack, then complete the FINISH FROSTY workflow. The FBMOD alone is not playable.");
+        Append("V5 preview: build one soundtrack FBMOD, choose an FBPACK or individual mods, then use one Launch action.");
         FormClosing+=HandleFormClosing;
         Append("DURATION: no maximum track length is imposed. Long tracks remain subject to converter, file-size and integrity checks.");
         FormClosed+=(s,e)=>{notifier.Visible=false;notifier.Dispose();editor.Dispose();};
@@ -289,11 +289,11 @@ internal sealed class HeatMusicInstallerV3 : Form
                 if(planOnly&&code==0&&!String.IsNullOrEmpty(lastReportJson))OpenEditor();
                 Append(closeRequested?"Cancellation completed. No builder processes remain running.":
                     code==0?(planOnly?"Analysis completed. Configure your music in the second tab.":
-                    "Export completed. Import the FBMOD LAST in Frosty, generate the profile, close the game, then use FINISH FROSTY."):
+                    "Soundtrack FBMOD exported. Open MODS & LAUNCH to combine it with your other mods."):
                     "Processing failed (code "+code+"). No new export was produced.");
                 running=null;
                 if(!closeRequested)Notify(code==0?(planOnly?"Analysis complete":"Mod export complete"):"Processing failed",
-                    code==0?(planOnly?"Your playlists are ready to configure.":"Apply in Frosty, close the game, then use FINISH FROSTY before playing."):"Open the activity log for details.",code!=0);
+                    code==0?(planOnly?"Your playlists are ready to configure.":"Your soundtrack is ready under MODS & LAUNCH."):"Open the activity log for details.",code!=0);
                 p.Dispose();
                 if(closeRequested)Close();
             }));};

@@ -52,11 +52,9 @@ function main(){
   const target=path.join(output,name);
   fs.copyFileSync(metadata,target,fs.constants.COPYFILE_EXCL);
   const digest=sha256(target);
-  const companion=require('./HeatMusicFrostyCompanion').exportCompanion({game:require('./HeatMusicPaths').game,build:folder,modFile:target,output});
   console.log('EXPORT_READY',target);
-  console.log('COMPANION_READY',companion);
   console.log('EXPORT_SHA256',digest);
-  console.log('FROSTY_INSTRUCTIONS','Import the FBMOD LAST in Frosty and let it generate ModData. Close the game, then use Finish Frosty in Music Builder. The .music folder is REQUIRED; this FBMOD alone is not playable in Frosty 1.0.6.3.');
+  console.log('FROSTY_INSTRUCTIONS','Open Mods & Launch, import an FBPACK or add individual FBMODs, then launch. The soundtrack FBMOD is applied last automatically by the GPL manager.');
 }
 
 if(require.main===module)try{main();}catch(error){console.error('EXPORT_ERROR:',error.stack||error.message);process.exitCode=1;}
