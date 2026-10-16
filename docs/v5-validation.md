@@ -28,4 +28,4 @@ This record distinguishes automated validation from gameplay testing. It contain
 
 ## Not yet claimed
 
-Process creation does not prove gameplay. Menu, entering the world, garage, playlists and race intros must be tested in the game before V5 is promoted from a test build.
+The Steam + EA App installation launched with the combined UNITE + soundtrack profile, and the user reported that it worked. This is a user-reported gameplay result rather than an automated assertion. EA App-only installation remains untested, so the first public build is labeled Beta 1 rather than stable.

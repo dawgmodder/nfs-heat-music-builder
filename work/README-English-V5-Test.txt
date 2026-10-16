@@ -1,4 +1,4 @@
-NFS HEAT MUSIC BUILDER V5 TEST
+NFS HEAT MUSIC BUILDER V5 BETA 1
 
 This test build uses its own manager based on the current GPLv3 Frosty source. It is not a claim of compatibility with the official Frosty Mod Manager 1.0.6.3.
 

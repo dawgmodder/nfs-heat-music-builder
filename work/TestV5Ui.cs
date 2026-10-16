@@ -11,6 +11,6 @@ internal static class TestV5Ui {
  var tabs=(TabControl)t.GetField("tabs",flags).GetValue(f);if(tabs.TabPages.Count!=3||tabs.TabPages[2].Text!="Mods & Launch")throw new Exception("Missing manager tab");
  tabs.SelectedIndex=2;Application.DoEvents();var panel=t.GetField("frostyPanel",flags).GetValue(f) as Control;if(panel==null)throw new Exception("Manager panel missing");
  bool hasLaunch=false;foreach(Control c in panel.Controls)hasLaunch|=FindButton(c,"APPLY MODS AND LAUNCH");if(!hasLaunch)throw new Exception("One-click launch button missing");
- f.Close();}Console.WriteLine("PASS V5 Preview form, icon, manager tab, one-click Launch and clean idle close. No game launch.");}
+ f.Close();}Console.WriteLine("PASS V5 form, icon, manager tab, one-click Launch and clean idle close. No game launch.");}
  static bool FindButton(Control root,string text){if(root is Button&&root.Text==text)return true;foreach(Control child in root.Controls)if(FindButton(child,text))return true;return false;}
 }
