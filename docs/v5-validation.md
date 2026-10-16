@@ -24,7 +24,8 @@ This record distinguishes automated validation from gameplay testing. It contain
 - Simulated Frosty failure: retained the previous active profile.
 - Reopen: restored selected items, load order and soundtrack.
 - Generated UNITE + soundtrack payloads: 199/199 decompressed hashes matched, 0 errors.
+- Steam launch plan: passed AppID 1222680, `-dataPath` forwarding and unsafe-path rejection; the real Steam/EA launch created a running NFS Heat process.
 
 ## Not yet claimed
 
-The automated checks do not prove gameplay. Menu, entering the world, garage, playlists and race intros must be tested in the game before V5 is promoted from a test build.
+Process creation does not prove gameplay. Menu, entering the world, garage, playlists and race intros must be tested in the game before V5 is promoted from a test build.

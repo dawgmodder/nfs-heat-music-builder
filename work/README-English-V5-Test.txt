@@ -12,6 +12,8 @@ WORKFLOW
 
 Importing only records the package and selection. Launch prepares a temporary profile, validates it, preserves the previous working profile on failure or cancellation, then starts NFS Heat with ModData/HeatMusicV5.
 
+Steam installations are launched through Steam AppID 1222680 so the dataPath reaches the game. The package includes Frosty's GPL-distributed CryptBase launch shim and copies it beside the game executable only when it is absent; an existing file is never overwritten. EA App-only installations receive both -dataPath and GAME_DATA_DIR, but still require separate gameplay confirmation.
+
 FIRST RUN
 Internet access may be required by the existing audio setup to obtain its separately distributed conversion dependencies. The NFS Heat encryption key is extracted from the user's installed copy of the game and is never included in this package.
 

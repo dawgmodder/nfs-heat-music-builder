@@ -93,7 +93,7 @@ internal sealed class HeatMusicModManagerPanel : UserControl
             UseShellExecute=false,RedirectStandardOutput=true,RedirectStandardError=true,CreateNoWindow=true,StandardOutputEncoding=Encoding.UTF8,StandardErrorEncoding=Encoding.UTF8},EnableRaisingEvents=true};
         var process=running;process.OutputDataReceived+=(s,a)=>{if(a.Data!=null)Append(a.Data);};process.ErrorDataReceived+=(s,a)=>{if(a.Data!=null)Append("ERROR "+a.Data);};
         process.Exited+=(s,a)=>{process.WaitForExit();int code=process.ExitCode;BeginInvoke(new Action(()=>{running=null;launch.Enabled=true;process.Dispose();
-            if(code==0){notify("Mods ready","Launching NFS Heat with the combined profile.",false);try{Process.Start(new ProcessStartInfo{FileName=exe,Arguments="-dataPath \"ModData/HeatMusicV5\"",WorkingDirectory=game,UseShellExecute=true});}catch(Exception ex){MessageBox.Show(this,"Profile ready, but launch failed: "+ex.Message);}}
+            if(code==0){notify("Mods ready","Launching NFS Heat with the combined profile.",false);try{HeatGameLauncher.Launch(game,"ModData/HeatMusicV5",Path.Combine(workspace,"runtime"),Append);}catch(Exception ex){MessageBox.Show(this,"Profile ready, but launch failed: "+ex.Message);}}
             else if(code==2)notify("Launch cancelled","The active profile was preserved.",false);else notify("Frosty apply failed","Open the manager log for details.",true);cancelPath=null;if(Finished!=null)Finished();}));};
         try{process.Start();process.BeginOutputReadLine();process.BeginErrorReadLine();}catch(Exception ex){running=null;launch.Enabled=true;process.Dispose();MessageBox.Show(this,ex.Message);}
     }
