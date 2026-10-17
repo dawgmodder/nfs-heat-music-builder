@@ -8,6 +8,7 @@ const game=process.argv[2]&&path.resolve(process.argv[2]);
 const dataDir=process.argv[3]&&path.resolve(process.argv[3]);
 const target=process.argv[4]&&path.resolve(process.argv[4]);
 const verifyOnly=process.argv.includes('--verify-only');
+const ensure=process.argv.includes('--ensure');
 const testWorkspace=process.argv.includes('--test-workspace');
 const hash=buffer=>crypto.createHash('sha256').update(buffer).digest('hex');
 function fail(message){throw new Error(message);}
@@ -87,24 +88,44 @@ function main(){
   }
   console.log('BASELINE_COMPATIBLE',changes.length,'slots','TOC',hash(patched));
   if(verifyOnly)return;
-  const normalTarget=path.join(game,'ModData','HeatTrack24RaceIntroAudioTest');
+  const normalTarget=path.join(path.resolve(__dirname,'..'),'output','portable-baseline');
   const testTarget=path.join(path.resolve(__dirname,'..'),'output','portable-baseline-test');
   if(target!==normalTarget&&!(testWorkspace&&target===testTarget))
     fail('Destino de baseline inválido');
-  if(fs.existsSync(target))fail('Baseline já existe; não será sobrescrito: '+target);
-  fs.mkdirSync(path.dirname(target),{recursive:true});
-  fs.mkdirSync(target);
-  const replacements=new Set(['win32\\chunks0.toc',...casFiles.map(x=>x[0])]);
-  cloneAncestors(gameData,path.join(target,'Data'),'',replacements);
-  fs.writeFileSync(path.join(target,'Data','Win32','chunks0.toc'),patched);
-  for(const [relative,originalSize,finalSize] of casFiles){
-    const file=path.join(target,'Data',relative);
-    fs.truncateSync(file,finalSize);
-    if(fs.statSync(file).size!==finalSize)fail('Falha ao montar '+relative);
+  if(fs.existsSync(target)){
+    if(!ensure)fail('Baseline já existe; não será sobrescrito: '+target);
+    const existingToc=path.join(target,'Data','Win32','chunks0.toc');
+    if(!fs.existsSync(existingToc)||hash(fs.readFileSync(existingToc))!==intro.patchedTocSha256)
+      fail('Baseline portátil existente está incompleta ou foi alterada: '+target);
+    for(const [relative,,finalSize] of casFiles){const file=path.join(target,'Data',relative);
+      if(!fs.existsSync(file)||fs.statSync(file).size!==finalSize)
+        fail('Baseline portátil existente possui CAS inválido: '+relative);
+    }
+    if(!fs.existsSync(path.join(target,'Patch')))
+      fail('Baseline portátil existente não possui o Patch original vinculado');
+    console.log('BASELINE_REUSED',target);return;
   }
-  fs.symlinkSync(gamePatch,path.join(target,'Patch'),'junction');
-  const gameUpdate=path.join(game,'Update');
-  if(fs.existsSync(gameUpdate))fs.symlinkSync(gameUpdate,path.join(target,'Update'),'junction');
+  const stage=target+'.building-'+process.pid+'-'+crypto.randomBytes(3).toString('hex');
+  if(fs.existsSync(stage))fail('Diretório temporário inesperado: '+stage);
+  fs.mkdirSync(path.dirname(target),{recursive:true});
+  try{
+    fs.mkdirSync(stage);
+    const replacements=new Set(['win32\\chunks0.toc',...casFiles.map(x=>x[0])]);
+    cloneAncestors(gameData,path.join(stage,'Data'),'',replacements);
+    fs.writeFileSync(path.join(stage,'Data','Win32','chunks0.toc'),patched);
+    for(const [relative,,finalSize] of casFiles){
+      const file=path.join(stage,'Data',relative);
+      fs.truncateSync(file,finalSize);
+      if(fs.statSync(file).size!==finalSize)fail('Falha ao montar '+relative);
+    }
+    fs.symlinkSync(gamePatch,path.join(stage,'Patch'),'junction');
+    const gameUpdate=path.join(game,'Update');
+    if(fs.existsSync(gameUpdate))fs.symlinkSync(gameUpdate,path.join(stage,'Update'),'junction');
+    fs.renameSync(stage,target);
+  }catch(error){
+    if(fs.existsSync(stage))fs.rmSync(stage,{recursive:true,force:true});
+    throw error;
+  }
   console.log('BASELINE_CREATED',target);
 }
 try{main();}catch(error){console.error('ERROR:',error.stack||error.message);process.exitCode=1;}

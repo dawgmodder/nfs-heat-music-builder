@@ -10,4 +10,5 @@ const converter=fromEnv('HEAT_MUSIC_CONVERTER',
 const frostyRuntime=fromEnv('HEAT_MUSIC_FROSTY_RUNTIME',
   path.join(process.env.LOCALAPPDATA||'C:\\Users\\WIN10\\AppData\\Local',
     'HeatMusicReplacer','Runtime'));
-module.exports={root,game,ffmpeg,ffprobe,converter,converterDir:path.dirname(converter),frostyRuntime};
+const baseline=fromEnv('HEAT_MUSIC_BASELINE',path.join(root,'output','portable-baseline'));
+module.exports={root,game,ffmpeg,ffprobe,converter,converterDir:path.dirname(converter),frostyRuntime,baseline};

@@ -282,11 +282,14 @@ internal static class HeatTrack24SizeMod
             Console.WriteLine("MENU BootFlowLeadIn and BootFlowLoop -> " + garageEntry.Name);
         }
 
+        int modifiedPlaylistGraphCount = 0;
         if (dynamicAllIntro)
         {
+            modifiedPlaylistGraphCount = DisablePlaylistExitMarkers(waveNames);
             PreserveGaragePlayback();
             ValidateRaceIntroCount("Audio/Music/Roboto/Roboto_LicensedMusic_RaceDay", 10);
             ValidateRaceIntroCount("Audio/Music/Roboto/Roboto_LicensedMusic_RaceNight", 11);
+            Console.WriteLine("PLAYLIST_GRAPHS " + modifiedPlaylistGraphCount + " music assets updated");
         }
         else if (forceIntro || firstBatch || dynamicBuild)
         {
@@ -347,13 +350,65 @@ internal static class HeatTrack24SizeMod
                 else if (resource.Type != ModResourceType.Embedded)
                     throw new InvalidDataException("Unexpected mod resource: " + resource.Type);
             }
-            if (ebxCount != waveNames.Length + (dynamicAllIntro ? 1 : 0) + (menuTest ? 1 : 0) + ((forceIntro || firstBatch || dynamicBuild) && !dynamicAllIntro ? 2 : 0) || resCount != waveNames.Length)
+            if (ebxCount != waveNames.Length + modifiedPlaylistGraphCount + (menuTest ? 1 : 0) + ((forceIntro || firstBatch || dynamicBuild) && !dynamicAllIntro ? 2 : 0) || resCount != waveNames.Length)
                 throw new InvalidDataException("Unexpected EBX/RES count: " + ebxCount + "/" + resCount);
             if (dynamicAllIntro && chunkCount != modifiedAudioChunks.Count)
                 throw new InvalidDataException("Exported chunk count does not match modified audio chunks: " + chunkCount + "/" + modifiedAudioChunks.Count);
             Console.WriteLine("OUTPUT " + output + " EBX=" + ebxCount + " RES=" + resCount + " CHUNK=" + chunkCount);
         }
         return 0;
+    }
+
+    private static int DisablePlaylistExitMarkers(string[] waveNames)
+    {
+        HashSet<Guid> playlistWaveGuids = new HashSet<Guid>();
+        foreach (string waveName in waveNames)
+        {
+            if (!waveName.StartsWith("Audio/Music/Roboto/Playlist/", StringComparison.OrdinalIgnoreCase)) continue;
+            EbxAssetEntry waveEntry = App.AssetManager.GetEbxEntry(waveName);
+            if (waveEntry == null || waveEntry.Type != "NewWaveAsset")
+                throw new InvalidDataException("Playlist wave missing while updating markers: " + waveName);
+            playlistWaveGuids.Add(waveEntry.Guid);
+        }
+        if (playlistWaveGuids.Count != 71)
+            throw new InvalidDataException("Expected 71 licensed playlist waves, found " + playlistWaveGuids.Count);
+
+        int graphCount = 0, segmentCount = 0;
+        foreach (EbxAssetEntry entry in App.AssetManager.EnumerateEbx("MusicAsset", false, false, true, ""))
+        {
+            EbxAsset asset = App.AssetManager.GetEbx(entry);
+            int graphSegments = 0;
+            foreach (object candidate in asset.Objects)
+            {
+                if (!String.Equals(candidate.GetType().Name, "MusicSegmentData", StringComparison.Ordinal)) continue;
+                PropertyInfo waveProperty = candidate.GetType().GetProperty("Wave");
+                if (waveProperty == null) throw new InvalidDataException("Music segment Wave property missing in " + entry.Name);
+                object wavePointer = waveProperty.GetValue(candidate, null);
+                if (wavePointer == null) continue;
+                object external = wavePointer.GetType().GetProperty("External").GetValue(wavePointer, null);
+                if (external == null) continue;
+                FieldInfo fileGuidField = external.GetType().GetField("FileGuid");
+                if (fileGuidField == null) throw new InvalidDataException("External Wave FileGuid missing in " + entry.Name);
+                Guid fileGuid = (Guid)fileGuidField.GetValue(external);
+                if (!playlistWaveGuids.Contains(fileGuid)) continue;
+
+                PropertyInfo trigger = candidate.GetType().GetProperty("TriggerNextPlayableOnExitMarker");
+                if (trigger == null || trigger.PropertyType != typeof(bool))
+                    throw new InvalidDataException("Playlist exit-marker flag missing in " + entry.Name);
+                trigger.SetValue(candidate, false, null);
+                if ((bool)trigger.GetValue(candidate, null))
+                    throw new InvalidDataException("Playlist exit-marker flag was not changed in " + entry.Name);
+                graphSegments++;
+                segmentCount++;
+            }
+            if (graphSegments == 0) continue;
+            App.AssetManager.ModifyEbx(entry.Name, asset);
+            graphCount++;
+            Console.WriteLine("PLAYLIST_EXIT_MARKERS_DISABLED " + entry.Name + " " + graphSegments + " segments");
+        }
+        if (segmentCount != 74)
+            throw new InvalidDataException("Expected 74 playlist wave references, found " + segmentCount);
+        return graphCount;
     }
 
     private static void PreserveGaragePlayback()

@@ -26,6 +26,10 @@ function run(script,args){return new Promise((resolve,reject)=>{
     const report=require('./HeatMusicGameAudit').audit(process.env.HEAT_MUSIC_GAME,root);
     fs.writeFileSync(path.join(root,'output','game-audit-v326.json'),JSON.stringify(report,null,2));
     console.log('GAME_AUDIO_VERIFIED',report.verified,'original resources');
+    const baseline=path.join(root,'output','portable-baseline');
+    await run('BuildPortableBaseline.js',[
+      process.env.HEAT_MUSIC_GAME,path.join(root,'output'),baseline,'--ensure'
+    ]);
   }
   await run('HeatMusicAutoPlanner.js',plannerArgs);
 })().catch(error=>{console.error('ERROR:',error.stack||error.message);process.exitCode=1;});

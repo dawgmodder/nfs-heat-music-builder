@@ -15,9 +15,9 @@ const {encodeSegment,POLICY}=require('./HeatMusicEaEncoder');
 
 const workspace = path.resolve(__dirname, '..');
 const game = paths.game;
-const modData = path.join(game, 'ModData');
-const baselineName = 'HeatTrack24RaceIntroAudioTest';
-const baseline = path.join(modData, baselineName);
+// This baseline is generated from the player's verified original files inside
+// the portable workspace. Never depend on a legacy developer ModData folder.
+const baseline = paths.baseline;
 const ffmpeg = paths.ffmpeg;
 const ffprobe = paths.ffprobe;
 const converterDir = paths.converterDir;

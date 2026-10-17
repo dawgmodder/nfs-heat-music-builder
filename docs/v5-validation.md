@@ -24,8 +24,10 @@ This record distinguishes automated validation from gameplay testing. It contain
 - Simulated Frosty failure: retained the previous active profile.
 - Reopen: restored selected items, load order and soundtrack.
 - Generated UNITE + soundtrack payloads: 199/199 decompressed hashes matched, 0 errors.
+- Clean-install portable baseline: created from verified original game files and reused on a second run.
+- Playlist graph regression: all 71 licensed wave assets resolved across 74 segment references in four music graphs; exit-marker transitions were disabled only for those references. All 199 audio resources exported and the resulting FBMOD passed structural validation.
 - Steam launch plan: passed AppID 1222680, `-dataPath` forwarding and unsafe-path rejection; the real Steam/EA launch created a running NFS Heat process.
 
 ## Not yet claimed
 
-The Steam + EA App installation launched with the combined UNITE + soundtrack profile, and the user reported that it worked. This is a user-reported gameplay result rather than an automated assertion. EA App-only installation remains untested, so the first public build is labeled Beta 1 rather than stable.
+The Steam + EA App installation launched with the combined UNITE + soundtrack profile, and the user reported that it worked. This is a user-reported gameplay result rather than an automated assertion. The Beta 2 fixes still require gameplay confirmation, and EA App-only installation remains untested.
