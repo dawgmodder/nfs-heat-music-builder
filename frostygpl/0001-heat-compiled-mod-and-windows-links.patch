@@ -225,3 +225,76 @@ index cc31b76..d3834b7 100644
 -}
 \ No newline at end of file
 +}
+diff --git a/FrostySdk/Managers/AssetManager.cs b/FrostySdk/Managers/AssetManager.cs
+index e9dadec..0b66d18 100644
+--- a/FrostySdk/Managers/AssetManager.cs
++++ b/FrostySdk/Managers/AssetManager.cs
+@@ -470,10 +470,35 @@ public static class AssetManager
+     /// so that TextureChunks which are stored in Bundles have the correct data.
+     /// </summary>
+     /// <param name="entry">The <see cref="ChunkAssetEntry"/> of the Chunk.</param>
+-    internal static void AddSuperBundleChunk(ChunkAssetEntry entry)
++    internal static void AddSuperBundleChunk(ChunkAssetEntry entry, bool inOverrideExistingLocation = true)
+     {
+         if (s_chunkGuidMapping.TryGetValue(entry.Id, out ChunkAssetEntry? existing))
+         {
++            if (!inOverrideExistingLocation)
++            {
++                // Manifest2019 loads the highest-priority (patch/mod) toc first and may
++                // then load the base toc to fill entries omitted by the patch.  A base
++                // entry with the same GUID must enrich the existing entry, not replace
++                // the already selected patch CAS location.
++                existing.Bundles.UnionWith(entry.Bundles);
++                existing.SuperBundleInstallChunks.UnionWith(entry.SuperBundleInstallChunks);
++
++                if (existing.LogicalSize == 0)
++                {
++                    existing.LogicalOffset = entry.LogicalOffset;
++                    existing.LogicalSize = entry.LogicalSize;
++                    existing.OriginalSize = entry.OriginalSize;
++                }
++
++                if (existing.Sha1 == Sha1.Zero)
++                {
++                    existing.Sha1 = entry.Sha1;
++                }
++
++                existing.AddFileInfo(entry.FileInfo);
++                return;
++            }
++
+             // add existing Bundles
+             entry.Bundles.UnionWith(existing.Bundles);
+ 
+diff --git a/FrostySdk/Managers/Loaders/Manifest2019AssetLoader.cs b/FrostySdk/Managers/Loaders/Manifest2019AssetLoader.cs
+index e86602a..122f7a6 100644
+--- a/FrostySdk/Managers/Loaders/Manifest2019AssetLoader.cs
++++ b/FrostySdk/Managers/Loaders/Manifest2019AssetLoader.cs
+@@ -43,7 +43,7 @@ public class Manifest2019AssetLoader : IAssetLoader
+                 bool found = false;
+                 foreach (FileSystemSource source in FileSystemManager.Sources)
+                 {
+-                    switch (LoadSuperBundle(source, sbIc))
++                    switch (LoadSuperBundle(source, sbIc, found))
+                     {
+                         case Code.Continue:
+                             found = true;
+@@ -66,7 +66,8 @@ public class Manifest2019AssetLoader : IAssetLoader
+         }
+     }
+ 
+-    private Code LoadSuperBundle(FileSystemSource inSource, SuperBundleInstallChunk inSbIc)
++    private Code LoadSuperBundle(FileSystemSource inSource, SuperBundleInstallChunk inSbIc,
++        bool inIsFallbackSource)
+     {
+         if (!inSource.TryResolvePath($"{inSbIc.Name}.toc", out string? path))
+         {
+@@ -226,7 +227,7 @@ public class Manifest2019AssetLoader : IAssetLoader
+ 
+                     chunk.AddFileInfo(new CasFileInfo(casFileIdentifier, offset, size, 0));
+ 
+-                    AssetManager.AddSuperBundleChunk(chunk);
++                    AssetManager.AddSuperBundleChunk(chunk, !inIsFallbackSource);
+                 }
+ 
+                 chunkData.Dispose();

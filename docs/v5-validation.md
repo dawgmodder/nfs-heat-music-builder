@@ -26,8 +26,9 @@ This record distinguishes automated validation from gameplay testing. It contain
 - Generated UNITE + soundtrack payloads: 199/199 decompressed hashes matched, 0 errors.
 - Clean-install portable baseline: created from verified original game files and reused on a second run.
 - Playlist graph regression: all 71 licensed wave assets resolved across 74 segment references in four music graphs; exit-marker transitions were disabled only for those references. All 199 audio resources exported and the resulting FBMOD passed structural validation.
+- Manifest2019 precedence regression: a one-song build was mounted both by itself and after the selected UNITE components. A fresh, cache-free read of each generated ModData profile matched the complete 273.768-second custom payload in all 71 playlist chunks (`71/71`, including every `VS_*_Loop` slot). Before the fix, only `1/71` matched and the remaining base chunks produced the approximately 18-second playback symptom.
 - Steam launch plan: passed AppID 1222680, `-dataPath` forwarding and unsafe-path rejection; the real Steam/EA launch created a running NFS Heat process.
 
 ## Not yet claimed
 
-The Steam + EA App installation launched with the combined UNITE + soundtrack profile, and the user reported that it worked. This is a user-reported gameplay result rather than an automated assertion. The Beta 2 fixes still require gameplay confirmation, and EA App-only installation remains untested.
+The Steam + EA App installation launched with the combined UNITE + soundtrack profile, and the user reported that it worked. This is a user-reported gameplay result rather than an automated assertion. The Beta 3 Manifest2019 fix passed payload-level validation but still requires gameplay confirmation, and EA App-only installation remains untested.
