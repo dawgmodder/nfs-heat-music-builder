@@ -7,6 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { readCatalogs, readLocation, writeLocation, resolveCas, locateChunk } = require('./HeatMusicCasAddress');
 
 const shaBytes = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
 function assertFile(file, label) {
@@ -54,6 +55,8 @@ function wrapEa(raw) {
   return Buffer.concat(parts);
 }
 function unwrapCasInterval(file, offset, size) {
+  if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(size) || size <= 0 ||
+      offset + size > fs.statSync(file).size) throw new Error(`Invalid CAS interval: ${file}`);
   const fd = fs.openSync(file, 'r');
   const wrapped = Buffer.alloc(size);
   try {
@@ -93,6 +96,7 @@ function preparedDataAudio(buildDir, item) {
   return raw;
 }
 function patchDataLayer(staging, buildDir, manifest, gameRoot) {
+  const catalogs = readCatalogs(staging);
   const active = path.join(staging, 'Data');
   if (!fs.existsSync(active)) throw new Error('Frosty staging profile has no Data layer');
   const source = fs.realpathSync(active);
@@ -106,14 +110,18 @@ function patchDataLayer(staging, buildDir, manifest, gameRoot) {
   const stagingToc = fs.readFileSync(sourceToc);
   for (const item of manifest.placements) {
     const at = item.tocOffset;
+    if (locateChunk(originalToc, item.chunkId) !== at || locateChunk(stagingToc, item.chunkId) !== at)
+      throw new Error(`Data chunk table changed: ${item.name}`);
     if (stagingToc.subarray(at, at + 12).compare(originalToc.subarray(at, at + 12)) !== 0)
       throw new Error(`Data music chunk conflicts with another selected mod: ${item.name}`);
   }
-  const ancestors = new Set([
-    'win32', 'win32\\configurations',
-    'win32\\configurations\\superbundleinstallpackage',
-    'win32\\configurations\\superbundleinstallpackage2',
-  ]);
+  // Materialize every destination catalog before replacing files. A directory
+  // junction at a destination would otherwise redirect writes into the game.
+  const ancestors = new Set(['win32']);
+  for (const bundle of catalogs.values()) {
+    const parts = bundle.split(/[\\/]/);
+    for (let i = 1; i <= parts.length; i++) ancestors.add(path.join(...parts.slice(0, i)).toLowerCase());
+  }
   const temporary = `${active}.music-overlay-${process.pid}`;
   if (fs.existsSync(temporary)) fs.rmSync(temporary, { recursive: true, force: true });
   cloneTree(source, temporary, new Map(), ancestors);
@@ -124,12 +132,17 @@ function patchDataLayer(staging, buildDir, manifest, gameRoot) {
   const tocFile = path.join(active, 'Win32', 'chunks0.toc');
   const toc = Buffer.from(stagingToc);
   const installed = [];
-  for (const casNumber of [8, 13, 14]) {
-    const rows = manifest.placements.filter(item => item.cas === casNumber);
-    if (!rows.length) continue;
-    const packageName = casNumber === 8 ? 'superbundleinstallpackage2' : 'superbundleinstallpackage';
-    const casFile = path.join(active, 'Win32', 'configurations', packageName,
-      `cas_${String(casNumber).padStart(2, '0')}.cas`);
+  const groups = new Map();
+  for (const item of manifest.placements) {
+    const loc = { ...readLocation(originalToc, item.tocOffset), cas: item.cas };
+    if (loc.patch) throw new Error(`Data chunk unexpectedly points to Patch: ${item.name}`);
+    const key = `${loc.catalog}:${loc.cas}`;
+    if (!groups.has(key)) groups.set(key, { loc, rows: [] });
+    groups.get(key).rows.push(item);
+  }
+  for (const { loc, rows } of groups.values()) {
+    const casNumber = loc.cas;
+    const casFile = resolveCas(staging, loc, catalogs);
     assertFile(casFile, `Staging Data cas_${String(casNumber).padStart(2, '0')}.cas`);
     const casTemp = `${casFile}.music-${process.pid}`;
     fs.copyFileSync(casFile, casTemp, fs.constants.COPYFILE_EXCL);
@@ -141,8 +154,7 @@ function patchDataLayer(staging, buildDir, manifest, gameRoot) {
         if (cursor + wrapped.length > 0xffffffff)
           throw new Error(`Data cas_${String(casNumber).padStart(2, '0')} exceeds the 32-bit offset limit`);
         const at = item.tocOffset;
-        toc[at] = 0; toc[at + 1] = 0; toc[at + 2] = 0; toc[at + 3] = casNumber;
-        toc.writeUInt32BE(cursor, at + 4); toc.writeUInt32BE(wrapped.length, at + 8);
+        writeLocation(toc, at, { ...loc, offset: cursor, size: wrapped.length });
         fs.appendFileSync(casTemp, wrapped);
         installed.push({ item, offset: cursor, size: wrapped.length, cas: casFile });
         cursor += wrapped.length;
@@ -170,6 +182,14 @@ function patchPatchLayer(staging, buildDir, manifest, gameRoot) {
   const originalTocFile = path.join(gameRoot, 'Patch', 'Win32', 'chunks0.toc');
   assertFile(originalTocFile, 'Original game Patch chunks0.toc');
   const originalToc = fs.readFileSync(originalTocFile);
+  const catalogs = readCatalogs(staging);
+  for (const item of items) {
+    if (locateChunk(originalToc, item.chunkId) !== item.tocOffset || locateChunk(toc, item.chunkId) !== item.tocOffset)
+      throw new Error(`Patch chunk table changed: ${item.name}`);
+    const loc = { ...readLocation(originalToc, item.tocOffset), patch: true, cas: 14 };
+    if (resolveCas(staging, loc, catalogs).toLowerCase() !== casFile.toLowerCase())
+      throw new Error(`Unexpected Patch music catalog: ${item.name}`);
+  }
   const casTemp = `${casFile}.music-${process.pid}`;
   fs.copyFileSync(casFile, casTemp, fs.constants.COPYFILE_EXCL);
   let cursor = fs.statSync(casTemp).size;
@@ -192,8 +212,7 @@ function patchPatchLayer(staging, buildDir, manifest, gameRoot) {
         throw new Error(`Prepared Patch audio checksum mismatch: ${item.name}`);
       const wrapped = wrapEa(raw);
       if (cursor + wrapped.length > 0xffffffff) throw new Error('Patch music CAS exceeds the 32-bit offset limit');
-      toc[at] = 0; toc[at + 1] = 1; toc[at + 2] = 1; toc[at + 3] = 14;
-      toc.writeUInt32BE(cursor, at + 4); toc.writeUInt32BE(wrapped.length, at + 8);
+      writeLocation(toc, at, { ...readLocation(originalToc, at), patch: true, cas: 14, offset: cursor, size: wrapped.length });
       fs.appendFileSync(casTemp, wrapped);
       installed.push({ item, offset: cursor, size: wrapped.length, audio });
       cursor += wrapped.length;
@@ -208,30 +227,29 @@ function patchPatchLayer(staging, buildDir, manifest, gameRoot) {
   }
   return installed;
 }
-function validateInstalled(staging, buildDir, manifest, dataInstalled, patchInstalled) {
+function validateInstalledAudio(staging, manifest) {
   if (!Array.isArray(manifest.placements) || !manifest.placements.length)
     throw new Error('Prepared soundtrack has no Data music placements');
-  const dataToc = fs.readFileSync(path.join(staging, 'Data', 'Win32', 'chunks0.toc'));
+  const catalogs = readCatalogs(staging);
   let checked = 0;
-  for (const row of dataInstalled) {
-    const item = row.item;
-    const at = item.tocOffset;
-    if (dataToc[at] !== 0 || dataToc[at + 1] !== 0 || dataToc[at + 3] !== item.cas ||
-        dataToc.readUInt32BE(at + 4) !== row.offset || dataToc.readUInt32BE(at + 8) !== row.size)
-      throw new Error(`Installed Data location mismatch: ${item.name}`);
-    const raw = unwrapCasInterval(row.cas, row.offset, row.size);
-    if (raw.length !== item.audioBytes || shaBytes(raw) !== item.audioSha256)
-      throw new Error(`Installed Data payload mismatch: ${item.name}`);
-    checked++;
+  const patch = [manifest.patchAudio, ...(manifest.patchExtras || [])].filter(Boolean);
+  for (const [layer, items] of [['Data', manifest.placements], ['Patch', patch]]) {
+    if (!items.length) continue;
+    const toc = fs.readFileSync(path.join(staging, layer, 'Win32', 'chunks0.toc'));
+    for (const item of items) {
+      const at = locateChunk(toc, item.chunkId), loc = readLocation(toc, at);
+      const context = `${layer} ${item.name} (${item.chunkId}) catalog=${loc.catalog} cas=${loc.cas} offset=${loc.offset} size=${loc.size}`;
+      if (loc.patch !== (layer === 'Patch')) throw new Error('Installed layer mismatch: ' + context);
+      const cas = resolveCas(staging, loc, catalogs);
+      let raw;
+      try { raw = unwrapCasInterval(cas, loc.offset, loc.size); }
+      catch (error) { throw new Error(`Installed audio address invalid: ${context}: ${error.message}`); }
+      if (raw.length !== item.audioBytes || shaBytes(raw) !== item.audioSha256)
+        throw new Error('Installed audio payload mismatch: ' + context);
+      checked++;
+    }
   }
-  for (const row of patchInstalled) {
-    const cas = path.join(staging, 'Patch', 'Win32', 'configurations', 'superbundleinstallpackage2', 'cas_14.cas');
-    const raw = unwrapCasInterval(cas, row.offset, row.size);
-    if (raw.length !== row.item.audioBytes || shaBytes(raw) !== row.item.audioSha256)
-      throw new Error(`Installed Patch payload mismatch: ${row.item.name}`);
-    checked++;
-  }
-  const expected=manifest.placements.length+patchInstalled.length;
+  const expected=manifest.placements.length+patch.length;
   if (checked !== expected) throw new Error(`Layered audio validation count mismatch: ${checked}/${expected}`);
   return checked;
 }
@@ -244,8 +262,8 @@ function applyLayeredOverlay({ staging, buildDir, gameRoot }) {
     throw new Error('Soundtrack was built by an incompatible V5 version; rebuild it with this version');
   const dataInstalled = patchDataLayer(staging, buildDir, manifest, gameRoot);
   const patchInstalled = patchPatchLayer(staging, buildDir, manifest, gameRoot);
-  const checked = validateInstalled(staging, buildDir, manifest, dataInstalled, patchInstalled);
+  const checked = validateInstalledAudio(staging, manifest);
   return { checked, data: manifest.placements.length, patch: patchInstalled.length, buildId: manifest.id };
 }
 
-module.exports = { applyLayeredOverlay, unwrapCasInterval, wrapEa };
+module.exports = { applyLayeredOverlay, validateInstalledAudio, unwrapCasInterval, wrapEa };

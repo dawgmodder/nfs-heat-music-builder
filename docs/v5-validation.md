@@ -36,3 +36,9 @@ This record distinguishes automated validation from gameplay testing. It contain
 ## Not yet claimed
 
 The earlier combined UNITE + soundtrack version was reported working by the user, but the Beta 4 layer-preserving fix has not yet been played in game. It must be tested beyond the former silence point, through the end of the song, automatic advance and manual skip. EA App-only installation remains untested.
+# Correction notice — Beta 6, 2026-10-18
+
+The historical validation results below are not proof of correct CAS addressing
+or gameplay. The previous overlay validator omitted the install-catalog byte.
+See [Beta 6 address regression](v5-beta6-address-test.md) for the confirmed defect,
+the corrected checks, and explicit pending in-game/full-coverage tests.

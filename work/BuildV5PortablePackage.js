@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('fs'),path=require('path');
 const repo=path.resolve(__dirname,'..'),root=path.resolve(repo,'..');
-const finalTarget=path.join(root,'output','HeatMusicPortableV5_Beta5_OneTrackCompatibility');
+const finalTarget=path.join(root,'output','HeatMusicPortableV5_Beta6_AddressTest');
 const target=finalTarget+'.building';
 const baseline=path.join(root,'output','HeatMusicPortableV4_1_Distribution');
 const frostBuild=path.join(root,'frostysource-current','FrostyCli','bin','Release','net8.0');
@@ -11,10 +11,11 @@ if(fs.existsSync(target))fs.rmSync(target,{recursive:true,force:true});
 function copy(source,destination){if(!fs.existsSync(source))throw new Error('Missing package input: '+source);fs.mkdirSync(path.dirname(destination),{recursive:true});fs.copyFileSync(source,destination);}
 function copyTree(source,destination,filter=()=>true){for(const entry of fs.readdirSync(source,{withFileTypes:true})){const from=path.join(source,entry.name),to=path.join(destination,entry.name);if(!filter(from,entry))continue;if(entry.isDirectory()){fs.mkdirSync(to,{recursive:true});copyTree(from,to,filter);}else if(entry.isFile())copy(from,to);}}
 const workFiles=[
+  'HeatMusicCasAddress.js',
   'HeatMusicAutoPlanner.js','HeatMusicSingleTrackV41Builder.js','HeatMusicPortableEntry.js','HeatMusicPortableSetup.js','HeatVisualTheme.cs','HeatMusicBrand.cs','HeatGameLauncher.cs','HeatMusicPresetStore.cs','HeatMusicAudioCache.js','HeatMusicPaths.js','ExtractOwnedGameKey.js','BuildPortableBaseline.js','HeatMusicCancellation.js','HeatMusicTiming.js','HeatMusicEaLayer3.js','HeatMusicEaEncoder.js','HeatMusicGameAudit.js','HeatMusicBuilder.js','HeatMusicPlaylistBuilder.js','HeatMusicBuildFolders.js','RunHeatMetadata.js','ExportPreparedHeatMusic.js','HeatMusicIntroPlaylistBuilder.js','NormalizeUnsafeAudio.js','EaBitrateCandidates.js','EaPartialDuration.js','InstallPreparedHeatMusic.js','VerifyPreparedHeatMusicIntroPlaylists.js','VerifyPreparedHeatMusicPlaylist.js','MeasurePlanLoudness.js','FrostyGplManager.js','HeatMusicV5LayeredOverlay.js','HeatFbPack.cs','HeatMusicModManagerPanel.cs','HeatMusicInstallerV3.cs','HeatMusicPlanEditor.cs'
 ];
 fs.mkdirSync(path.join(target,'work'),{recursive:true});
-copy(path.join(__dirname,'HeatMusicInstallerV5Beta5.exe'),path.join(target,'HeatMusicInstallerV5Beta5.exe'));
+copy(path.join(__dirname,'HeatMusicInstallerV5Beta6.exe'),path.join(target,'HeatMusicInstallerV5Beta6.exe'));
 copy(path.join(__dirname,'README-English-V5-Test.txt'),path.join(target,'README.txt'));
 copy(path.join(baseline,'runtime','node.exe'),path.join(target,'runtime','node.exe'));
 copy(path.join(baseline,'NODE-LICENSE.txt'),path.join(target,'licenses','NODE-LICENSE.txt'));
@@ -32,6 +33,7 @@ copy(path.join(repo,'frostygpl','0001-heat-compiled-mod-and-windows-links.patch'
 copy(path.join(repo,'frostygpl','README.md'),path.join(target,'source','frostygpl','README.md'));
 copyTree(path.join(repo,'frostygpl','FrostyPayloadAudit'),path.join(target,'source','frostygpl','FrostyPayloadAudit'));
 copy(path.join(repo,'docs','v5-validation.md'),path.join(target,'docs','v5-validation.md'));
+copy(path.join(repo,'docs','v5-beta6-address-test.md'),path.join(target,'docs','v5-beta6-address-test.md'));
 for(const folder of ['direct-track24-ealayer3-all-test','direct-track24-menu-loop-test','direct-track24-menu-lead-loop-test','direct-track24-race-intro-test']){
   const source=path.join(baseline,'output',folder,'manifest.json');if(fs.existsSync(source))copy(source,path.join(target,'output',folder,'manifest.json'));
 }
