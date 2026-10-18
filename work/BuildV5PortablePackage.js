@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('fs'),path=require('path');
 const repo=path.resolve(__dirname,'..'),root=path.resolve(repo,'..');
-const finalTarget=path.join(root,'output','HeatMusicPortableV5_Beta3_1_Final');
+const finalTarget=path.join(root,'output','HeatMusicPortableV5_Beta4_LayeredAudio');
 const target=finalTarget+'.building';
 const baseline=path.join(root,'output','HeatMusicPortableV4_3_Final');
 const frostBuild=path.join(root,'frostysource-current','FrostyCli','bin','Release','net8.0');
@@ -14,11 +14,12 @@ const workFiles=[
   'HeatMusicAutoPlanner.js','HeatMusicPortableEntry.js','HeatMusicPortableSetup.js','HeatVisualTheme.cs','HeatMusicBrand.cs','HeatGameLauncher.cs','HeatMusicPresetStore.cs','HeatMusicAudioCache.js','HeatMusicPaths.js','ExtractOwnedGameKey.js','BuildPortableBaseline.js','HeatMusicCancellation.js','HeatMusicTiming.js','HeatMusicEaLayer3.js','HeatMusicEaEncoder.js','HeatMusicGameAudit.js','HeatMusicBuilder.js','HeatMusicPlaylistBuilder.js','HeatMusicBuildFolders.js','RunHeatMetadata.js','ExportPreparedHeatMusic.js','HeatMusicIntroPlaylistBuilder.js','NormalizeUnsafeAudio.js','EaBitrateCandidates.js','EaPartialDuration.js','InstallPreparedHeatMusic.js','VerifyPreparedHeatMusicIntroPlaylists.js','VerifyPreparedHeatMusicPlaylist.js','MeasurePlanLoudness.js','FrostyGplManager.js','HeatFbPack.cs','HeatMusicModManagerPanel.cs','HeatMusicInstallerV3.cs','HeatMusicPlanEditor.cs'
 ];
 fs.mkdirSync(path.join(target,'work'),{recursive:true});
-copy(path.join(__dirname,'HeatMusicInstallerV5Beta3.exe'),path.join(target,'HeatMusicInstallerV5Beta3.exe'));
+copy(path.join(__dirname,'HeatMusicInstallerV5Beta4.exe'),path.join(target,'HeatMusicInstallerV5Beta4.exe'));
 copy(path.join(__dirname,'README-English-V5-Test.txt'),path.join(target,'README.txt'));
 copy(path.join(baseline,'runtime','node.exe'),path.join(target,'runtime','node.exe'));
 copy(path.join(baseline,'NODE-LICENSE.txt'),path.join(target,'licenses','NODE-LICENSE.txt'));
 for(const file of workFiles)copy(path.join(__dirname,file),path.join(target,'work',file));
+copy(path.join(__dirname,'HeatMusicV5LayeredOverlay.js'),path.join(target,'work','HeatMusicV5LayeredOverlay.js'));
 for(const file of ['ExtractTrustedZip.exe','DecodeOriginalEaForLoudness.exe'])copy(path.join(baseline,'work',file),path.join(target,'work',file));
 copy(path.join(__dirname,'HeatTrack24SizeMod.exe'),path.join(target,'work','HeatTrack24SizeMod.exe'));
 for(const folder of ['host','shared'])copyTree(path.join(dotnetRoot,folder),path.join(target,'runtime','dotnet8',folder));

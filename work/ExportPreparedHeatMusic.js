@@ -19,13 +19,13 @@ function main(){
     throw new Error('Unsafe or missing prepared build folder');
   const manifestFile=path.join(folder,'manifest.json');
   const manifest=JSON.parse(fs.readFileSync(manifestFile,'utf8'));
-  if(manifest.id!==path.basename(folder)||manifest.placements.length!==192||
+  if(manifest.id!==path.basename(folder)||manifest.frostyPayloadMode!=='metadata-with-layered-audio-overlay'||manifest.placements.length!==192||
      !Array.isArray(manifest.patchExtras)||manifest.patchExtras.length!==6||!manifest.patchAudio)
-    throw new Error('Prepared soundtrack is incomplete; expected 192 data waves and 7 patch waves');
+    throw new Error('Prepared soundtrack is incomplete; expected metadata-only Frosty payload plus 192 Data and 7 Patch waves');
   const metadataName=manifest.metadataFile||'intro-playlist-metadata.fbmod';
   const metadata=path.resolve(folder,metadataName);
   if(path.dirname(metadata)!==folder||!fs.existsSync(metadata)||fs.statSync(metadata).size<1024)
-    throw new Error('Self-contained Frosty mod file is missing or invalid');
+    throw new Error('Metadata Frosty mod file is missing or invalid');
   const rows=fs.readFileSync(path.join(folder,'waves.tsv'),'utf8').trim().split(/\r?\n/);
   if(rows.length!==199)throw new Error('Audio manifest does not contain all 199 soundtrack chunks');
   const expectedAudio=new Map();
@@ -54,7 +54,7 @@ function main(){
   const digest=sha256(target);
   console.log('EXPORT_READY',target);
   console.log('EXPORT_SHA256',digest);
-  console.log('FROSTY_INSTRUCTIONS','Open Mods & Launch, import an FBPACK or add individual FBMODs, then launch. The soundtrack FBMOD is applied last automatically by the GPL manager.');
+  console.log('FROSTY_INSTRUCTIONS','Open Mods & Launch, import an FBPACK or add individual FBMODs, then launch. The soundtrack metadata is applied last and its audio is installed in the original Data/Patch layers by the GPL manager.');
 }
 
 if(require.main===module)try{main();}catch(error){console.error('EXPORT_ERROR:',error.stack||error.message);process.exitCode=1;}

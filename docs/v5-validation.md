@@ -25,10 +25,14 @@ This record distinguishes automated validation from gameplay testing. It contain
 - Reopen: restored selected items, load order and soundtrack.
 - Generated UNITE + soundtrack payloads: 199/199 decompressed hashes matched, 0 errors.
 - Clean-install portable baseline: created from verified original game files and reused on a second run.
-- Playlist graph regression: all 71 licensed wave assets resolved across 74 segment references in four music graphs; exit-marker transitions were disabled only for those references. All 199 audio resources exported and the resulting FBMOD passed structural validation.
-- Manifest2019 precedence regression: a one-song build was mounted both by itself and after the selected UNITE components. A fresh, cache-free read of each generated ModData profile matched the complete 273.768-second custom payload in all 71 playlist chunks (`71/71`, including every `VS_*_Loop` slot). Before the fix, only `1/71` matched and the remaining base chunks produced the approximately 18-second playback symptom.
+- Playlist graph regression: all 71 licensed wave assets resolve across 74 segment references in four music graphs. The originals already use `TriggerNextPlayableOnExitMarker=false`; Beta 4 preserves that metadata instead of rewriting it.
+- Independent TOC/CAS comparison proved that the Beta 3 Manifest2019 precedence change altered only the SDK auditor's interpretation. The previous and current V5 game payloads were byte-identical, so that change did not fix playback.
+- Layer regression: the failed V5 FBMOD routed all 199 streamed music chunks through Patch. The original game and the working V4.1 layout use 192 Data chunks and 7 Patch chunks. Beta 4 exports a metadata-only FBMOD (`200 EBX`, `199 RES`, `0 CHUNK`) and transactionally merges audio into its original layers.
+- One-song regression: 71 playlist slots use one complete 273.768-second payload; full decode contains audible beginning, middle and end with no one-second silence. The assembled profile validated all 199 exact CAS intervals (`192 Data + 7 Patch`) twice, including a compatible-cache run.
+- Multi-song regression: a 51-distinct-playlist-audio build validated all 199 exact CAS intervals.
+- UNITE regression: direct import of the original FBPACK with UNITE Heat 3.5, ARCADE and Basic Stance plus the soundtrack validated all 199 intervals. Legitimate Patch relocation by Frosty is accepted only after the original TOC identity and final payload are validated.
 - Steam launch plan: passed AppID 1222680, `-dataPath` forwarding and unsafe-path rejection; the real Steam/EA launch created a running NFS Heat process.
 
 ## Not yet claimed
 
-The Steam + EA App installation launched with the combined UNITE + soundtrack profile, and the user reported that it worked. This is a user-reported gameplay result rather than an automated assertion. The Beta 3 Manifest2019 fix passed payload-level validation but still requires gameplay confirmation, and EA App-only installation remains untested.
+The earlier combined UNITE + soundtrack version was reported working by the user, but the Beta 4 layer-preserving fix has not yet been played in game. It must be tested beyond the former silence point, through the end of the song, automatic advance and manual skip. EA App-only installation remains untested.

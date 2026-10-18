@@ -75,6 +75,11 @@ internal sealed class HeatMusicModManagerPanel : UserControl
         if(Busy)return;string game=gameFolder();string exe=Path.Combine(game,"NeedForSpeedHeat.exe");
         if(!File.Exists(exe)){MessageBox.Show(this,"Select the NFS Heat game folder first.");return;}
         if(String.IsNullOrEmpty(soundtrackPath)||!File.Exists(soundtrackPath)){MessageBox.Show(this,"Build a soundtrack FBMOD first.");return;}
+        string buildName=Path.GetFileNameWithoutExtension(soundtrackPath);
+        const string prefix="NFSHeatCustomSoundtrack_";
+        if(!buildName.StartsWith(prefix,System.StringComparison.OrdinalIgnoreCase)){MessageBox.Show(this,"Select a soundtrack exported by this V5 build.");return;}
+        string musicBuildDir=Path.Combine(workspace,"output","custom-builds",buildName.Substring(prefix.Length));
+        if(!File.Exists(Path.Combine(musicBuildDir,"manifest.json"))){MessageBox.Show(this,"The prepared audio for this soundtrack is missing. Rebuild or import its audio preset first.");return;}
         string cli=ResolveRuntime("HEAT_MUSIC_FROSTY_GPL",Path.Combine("frosty-gpl","FrostyCli.dll"));
         string dotnet=ResolveRuntime("HEAT_MUSIC_DOTNET",Path.Combine("dotnet8","dotnet.exe"),Path.Combine("dotnet","dotnet.exe"));
         string key=ResolveRuntime("HEAT_MUSIC_INITFS_KEY",Path.Combine("FrostyEditor","NFSHEAT.key"),Path.Combine("keys","NFSHEAT.key"));
@@ -86,7 +91,7 @@ internal sealed class HeatMusicModManagerPanel : UserControl
         string session=Path.Combine(workspace,"output","frosty-v5-session");Directory.CreateDirectory(session);
         string modData=Path.Combine(game,"ModData","HeatMusicV5");string config=Path.Combine(session,"manager-config.json");cancelPath=config+".cancel";if(File.Exists(cancelPath))File.Delete(cancelPath);
         var data=new Dictionary<string,object>{{"gameExe",exe},{"frostyCli",cli},{"dotnet",dotnet},{"initFsKey",key},
-            {"workDir",Path.Combine(session,"work")},{"cacheDir",Path.Combine(workspace,"output","frosty-v5-cache")},{"cancelFile",cancelPath},{"modDataDir",modData},{"mods",selected.ToArray()},{"musicMod",soundtrackPath}};
+            {"workDir",Path.Combine(session,"work")},{"cacheDir",Path.Combine(workspace,"output","frosty-v5-cache")},{"cancelFile",cancelPath},{"modDataDir",modData},{"mods",selected.ToArray()},{"musicMod",soundtrackPath},{"musicBuildDir",musicBuildDir}};
         File.WriteAllText(config,new JavaScriptSerializer().Serialize(data),new UTF8Encoding(false));
         launch.Enabled=false;log.Clear();Append("Preparing combined Frosty profile...");
         running=new Process{StartInfo=new ProcessStartInfo{FileName=node,Arguments="\""+script+"\" \""+config+"\"",WorkingDirectory=workspace,

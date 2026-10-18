@@ -24,7 +24,8 @@ internal static class HeatTrack24SizeMod
 {
     private static readonly string Runtime = Environment.GetEnvironmentVariable("HEAT_MUSIC_FROSTY_RUNTIME") ?? @"C:\Users\WIN10\AppData\Local\HeatMusicReplacer\Runtime";
     private static readonly string Game = Environment.GetEnvironmentVariable("HEAT_MUSIC_GAME") ?? @"C:\Program Files (x86)\Steam\steamapps\common\Need for Speed Heat";
-    private static readonly string OutputFolder = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "output"));
+    private static readonly string OutputFolder = Environment.GetEnvironmentVariable("HEAT_MUSIC_OUTPUT") ??
+        Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "output"));
     private static readonly string IntroWaveSpecFile = Path.Combine(OutputFolder, "race-intro-track24-test", "waves.tsv");
     private const uint AudioBytes = 2127236;
     private const float AudioSeconds = 102.696f;
@@ -171,8 +172,6 @@ internal static class HeatTrack24SizeMod
         App.AssetManager.Initialize(true, new AssetManagerImportResult());
 
         if (File.Exists(output)) throw new InvalidOperationException("Output already exists: " + output);
-        HashSet<Guid> modifiedAudioChunks = new HashSet<Guid>();
-        Dictionary<Guid, byte[]> audioChunkPayloads = new Dictionary<Guid, byte[]>();
         for (int waveIndex = 0; waveIndex < waveNames.Length; waveIndex++)
         {
             string name = waveNames[waveIndex];
@@ -226,32 +225,11 @@ internal static class HeatTrack24SizeMod
             Array.Copy(BitConverter.GetBytes(newSize), 0, dataBytes, 976, 4);
             App.AssetManager.ModifyRes(resource.ResRid, dataBytes, resource.ResMeta);
             entry.LinkAsset(resource);
-            if (dynamicAllIntro)
-            {
-                Guid chunkId = (Guid)chunk.GetType().GetProperty("ChunkId").GetValue(chunk, null);
-                byte[] audioBytes = File.ReadAllBytes(dynamicAudioFiles[waveIndex]);
-                byte[] priorPayload;
-                if (audioChunkPayloads.TryGetValue(chunkId, out priorPayload))
-                {
-                    if (priorPayload.Length != audioBytes.Length)
-                        throw new InvalidDataException("Two wave assets assign different audio sizes to chunk " + chunkId);
-                    for (int byteIndex = 0; byteIndex < audioBytes.Length; byteIndex++)
-                        if (priorPayload[byteIndex] != audioBytes[byteIndex])
-                            throw new InvalidDataException("Two wave assets assign different audio to chunk " + chunkId);
-                }
-                else
-                {
-                    ChunkAssetEntry audioEntry = App.AssetManager.GetChunkEntry(chunkId);
-                    if (audioEntry == null) throw new InvalidDataException("Audio chunk is missing: " + chunkId);
-                    if (!App.AssetManager.ModifyChunk(chunkId, audioBytes))
-                        throw new InvalidDataException("Frosty rejected audio chunk: " + chunkId);
-                    entry.LinkAsset(audioEntry);
-                    audioChunkPayloads.Add(chunkId, audioBytes);
-                    modifiedAudioChunks.Add(chunkId);
-                    Console.WriteLine("AUDIO_CHUNK " + chunkId + " " + audioBytes.Length + " bytes " +
-                        Path.GetFileName(dynamicAudioFiles[waveIndex]));
-                }
-            }
+            // NFS Heat's streamed music chunks must remain in their original Data/Patch
+            // layer. Embedding them in an FBMOD makes Frosty place every chunk in Patch,
+            // which can start playback but causes the engine to stop early. The V5
+            // manager installs the already validated audio overlay after Frosty applies
+            // this metadata-only mod.
             Console.WriteLine("WAVE " + name + " duration " + originalSeconds + " -> " + newSeconds +
                 ", bytes " + oldSize + " -> " + newSize);
         }
@@ -285,11 +263,14 @@ internal static class HeatTrack24SizeMod
         int modifiedPlaylistGraphCount = 0;
         if (dynamicAllIntro)
         {
-            modifiedPlaylistGraphCount = DisablePlaylistExitMarkers(waveNames);
+            // Original NFS Heat playlist segments already have
+            // TriggerNextPlayableOnExitMarker=false. Do not rewrite all music graphs;
+            // the prior change did not affect playback and obscured the layer defect.
             PreserveGaragePlayback();
+            modifiedPlaylistGraphCount = 1;
             ValidateRaceIntroCount("Audio/Music/Roboto/Roboto_LicensedMusic_RaceDay", 10);
             ValidateRaceIntroCount("Audio/Music/Roboto/Roboto_LicensedMusic_RaceNight", 11);
-            Console.WriteLine("PLAYLIST_GRAPHS " + modifiedPlaylistGraphCount + " music assets updated");
+            Console.WriteLine("PLAYLIST_EXIT_MARKERS preserved from original metadata");
         }
         else if (forceIntro || firstBatch || dynamicBuild)
         {
@@ -311,7 +292,7 @@ internal static class HeatTrack24SizeMod
         settings.Author = "Codex / local user";
         settings.Version = "0.1";
         settings.Description = dynamicAllIntro ? "Dynamic metadata for all licensed playlists and all twenty-one original race-intro sequences. The game's original race-intro selection remains intact. Audio is supplied by a separate ModData overlay."
-            : dynamicBuild ? "Dynamic NewWaveAsset/NewWaveResource metadata for selected context chunks. Audio is supplied by the prepared audio overlay."
+            : dynamicBuild ? "Dynamic NewWaveAsset/NewWaveResource metadata for selected context chunks. Audio is supplied by the prepared layer-preserving overlay."
             : firstBatch ? "Isolated first batch: Track 1 in LIITA day free drive and Track 2 in Logic night free drive; Track 24 remains in menu, garage, generic race slots and forced day-night intros. Audio is supplied by a separate overlay."
             : forceIntro ? "Isolated test: menu, five contexts, and one Track 24 intro selected for every day or night race. The selected intro's six audio chunks are replaced."
             : raceIntro ? "Five original contexts, menu lead and loop, plus all six audio chunks for each of the selected day and night race intros. No music graph redirect."
@@ -343,17 +324,14 @@ internal static class HeatTrack24SizeMod
                 else if (resource.Type == ModResourceType.Chunk)
                 {
                     chunkCount++;
-                    Guid chunkId;
-                    if (!Guid.TryParse(resource.Name, out chunkId) || !modifiedAudioChunks.Contains(chunkId))
-                        throw new InvalidDataException("Unexpected audio chunk in exported mod: " + resource.Name);
                 }
                 else if (resource.Type != ModResourceType.Embedded)
                     throw new InvalidDataException("Unexpected mod resource: " + resource.Type);
             }
             if (ebxCount != waveNames.Length + modifiedPlaylistGraphCount + (menuTest ? 1 : 0) + ((forceIntro || firstBatch || dynamicBuild) && !dynamicAllIntro ? 2 : 0) || resCount != waveNames.Length)
                 throw new InvalidDataException("Unexpected EBX/RES count: " + ebxCount + "/" + resCount);
-            if (dynamicAllIntro && chunkCount != modifiedAudioChunks.Count)
-                throw new InvalidDataException("Exported chunk count does not match modified audio chunks: " + chunkCount + "/" + modifiedAudioChunks.Count);
+            if (dynamicAllIntro && chunkCount != 0)
+                throw new InvalidDataException("Metadata-only soundtrack FBMOD unexpectedly contains audio chunks: " + chunkCount);
             Console.WriteLine("OUTPUT " + output + " EBX=" + ebxCount + " RES=" + resCount + " CHUNK=" + chunkCount);
         }
         return 0;

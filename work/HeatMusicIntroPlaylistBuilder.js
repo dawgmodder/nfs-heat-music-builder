@@ -316,7 +316,7 @@ async function main(){
     if(row.layer==='Patch'){
       const raw=fs.readFileSync(ea.file);
       if(raw.length!==ea.bytes||sha(raw)!==ea.sha256)throw new Error('Patch audio changed: '+row.assetName);
-      manifest.patchExtras.push({name:row.assetName,tocOffset:p,
+      manifest.patchExtras.push({name:row.assetName,chunkId:row.chunkId,layer:'Patch',tocOffset:p,
         oldLocation:originalPatchToc.subarray(p,p+12).toString('hex'),
         audioFile:path.relative(folder,ea.file),audioBytes:ea.bytes,audioSha256:ea.sha256,
         seconds:ea.seconds,source,dropSeconds:drop});
@@ -330,7 +330,7 @@ async function main(){
     toc[p]=0;toc[p+1]=0;toc[p+2]=1;toc[p+3]=8;
     toc.writeUInt32BE(cursor,p+4);toc.writeUInt32BE(wrapped.length,p+8);
     fs.appendFileSync(casFile,wrapped);
-    manifest.placements.push({name:row.assetName,layer:'Data',tocOffset:p,cas:8,
+    manifest.placements.push({name:row.assetName,chunkId:row.chunkId,layer:'Data',tocOffset:p,cas:8,
       newOffset:cursor,newSize:wrapped.length,audioBytes:ea.bytes,
       audioSha256:ea.sha256,seconds:ea.seconds,source,dropSeconds:drop});
     cursor+=wrapped.length;lines.push([row.assetName,ea.bytes,ea.seconds,path.relative(folder,ea.file).replace(/\\/g,'/')].join('\t'));}

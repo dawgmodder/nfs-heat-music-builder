@@ -273,12 +273,12 @@ async function main() {
       targetToc[p]=0;targetToc[p+1]=0;targetToc[p+2]=1;targetToc[p+3]=8;
       targetToc.writeUInt32BE(dataCursor,p+4);targetToc.writeUInt32BE(wrapped.length,p+8);
       fs.appendFileSync(dataCasFile,wrapped);
-      manifest.placements.push({name:wave.name,layer:'Data',tocOffset:p,cas:8,newOffset:dataCursor,
+      manifest.placements.push({name:wave.name,chunkId:wave.guid,layer:'Data',tocOffset:p,cas:8,newOffset:dataCursor,
         newSize:wrapped.length,audioBytes:ea.bytes,audioSha256:ea.sha256,seconds:ea.seconds,source});
       dataCursor+=wrapped.length;
     }else{
       fs.copyFileSync(ea.file,patchEaFile,fs.constants.COPYFILE_EXCL);
-      manifest.patchAudio={name:wave.name,tocOffset:p,oldLocation:wave.location,
+      manifest.patchAudio={name:wave.name,chunkId:wave.guid,layer:'Patch',tocOffset:p,oldLocation:wave.location,
         audioBytes:ea.bytes,audioSha256:ea.sha256,seconds:ea.seconds,source};
     }
   }

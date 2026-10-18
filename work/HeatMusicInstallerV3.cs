@@ -188,7 +188,7 @@ internal sealed class HeatMusicInstallerV3 : Form
         panel.Controls.Add(new Label{Text="ACTIVITY LOG",Dock=DockStyle.Fill,ForeColor=HeatVisualTheme.Muted,Font=HeatVisualTheme.Ui(9,FontStyle.Bold)},0,5);
         log.BorderStyle=BorderStyle.None;log.Margin=Padding.Empty;
         panel.Controls.Add(log,0,6);panel.SetColumnSpan(log,3);
-        Append("V5 Beta 3: fixed Manifest2019 chunk precedence so complete custom songs replace every playlist and loop slot.");
+        Append("V5 Beta 4: Frosty applies metadata while all 199 streamed audio resources retain their original Data/Patch layer.");
         FormClosing+=HandleFormClosing;
         Append("DURATION: no maximum track length is imposed. Long tracks remain subject to converter, file-size and integrity checks.");
         FormClosed+=(s,e)=>{notifier.Visible=false;notifier.Dispose();editor.Dispose();};

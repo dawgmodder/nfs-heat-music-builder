@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
+const { applyLayeredOverlay } = require('./HeatMusicV5LayeredOverlay');
 
 let signalCancellation = false;
 let cleanupStaging = null;
@@ -76,12 +77,14 @@ async function main() {
   const key = path.resolve(config.initFsKey || '');
   const workDir = path.resolve(config.workDir || '');
   const modData = path.resolve(config.modDataDir || '');
+  const musicBuildDir = path.resolve(config.musicBuildDir || '');
   const selected = [...(config.mods || []), config.musicMod].filter(Boolean).map(file => path.resolve(file));
 
   assertFile(gameExe, 'NFS Heat executable');
   assertFile(cli, 'Frosty CLI');
   assertFile(dotnet, '.NET host');
   assertFile(key, 'NFS Heat initfs key');
+  assertFile(path.join(musicBuildDir, 'manifest.json'), 'Prepared soundtrack manifest');
   if (!selected.length) throw new Error('At least one FBMOD must be selected.');
   selected.forEach((file, index) => assertFile(file, `FBMOD ${index + 1}`));
   if (new Set(selected.map(file => file.toLowerCase())).size !== selected.length) {
@@ -132,6 +135,10 @@ async function main() {
   if (!fs.statSync(path.join(staging, 'Patch'), { throwIfNoEntry: false })?.isDirectory()) {
     throw new Error('Generated profile has no Patch directory.');
   }
+  emit('stage', { stage: 'install-layered-music-audio' });
+  const overlay = applyLayeredOverlay({ staging, buildDir: musicBuildDir, gameRoot: path.dirname(gameExe) });
+  emit('validated-audio', overlay);
+  checkpoint(config, 'layered music audio validation');
   emit('validated', { staging });
   if (fs.existsSync(previous)) fs.rmSync(previous, { recursive: true, force: true });
   let movedPrevious = false;
