@@ -183,7 +183,7 @@ function editedAllocation(editorFile){
     throw new Error('Invalid menu track (must be longer than 12 s)');
   const used=new Set([editor.menu,...keys.flatMap(key=>editor.playlists[key])]);
   return {pools,menu:tracks[editor.menu],quota:Object.fromEntries(keys.map(key=>[key,pools[key].length])),
-    skipped:tracks.filter((item,i)=>!used.has(i))};
+    skipped:tracks.filter((item,i)=>!used.has(i)),sourceTrackCount:tracks.length};
 }
 async function main(){
   checkCancellation();
@@ -204,7 +204,7 @@ async function main(){
     const config=stage(planDir,allocated);
     const configFile=path.join(planDir,'config.json');fs.writeFileSync(configFile,JSON.stringify(config,null,2));
     if(stageOnly){console.log('EDITOR_STAGE_READY',configFile);return;}
-    const builder=path.join(__dirname,'HeatMusicIntroPlaylistBuilder.js');
+    const builder=path.join(__dirname,allocated.sourceTrackCount===1?'HeatMusicSingleTrackV41Builder.js':'HeatMusicIntroPlaylistBuilder.js');
     await streamRun(process.execPath,[builder,configFile,...(prepareOnly?['--prepare-only']:[])],9000000);
     return;
   }
@@ -261,7 +261,7 @@ async function main(){
   console.log('AUTO_MENU',path.basename(allocated.menu.file));
   if(allocated.skipped.length)console.log('WARNING',allocated.skipped.length,'tracks did not fit in the 59 slots');
   if(editPlan)return;
-  const builder=path.join(__dirname,'HeatMusicIntroPlaylistBuilder.js');
+  const builder=path.join(__dirname,tracks.length===1?'HeatMusicSingleTrackV41Builder.js':'HeatMusicIntroPlaylistBuilder.js');
   await streamRun(process.execPath,[builder,configFile,...(planOnly?['--dry-run']:prepareOnly?['--prepare-only']:[])],
     planOnly?120000:9000000);
 }

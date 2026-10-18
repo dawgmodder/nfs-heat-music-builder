@@ -19,17 +19,24 @@ function main(){
     throw new Error('Unsafe or missing prepared build folder');
   const manifestFile=path.join(folder,'manifest.json');
   const manifest=JSON.parse(fs.readFileSync(manifestFile,'utf8'));
-  if(manifest.id!==path.basename(folder)||manifest.frostyPayloadMode!=='metadata-with-layered-audio-overlay'||manifest.placements.length!==192||
-     !Array.isArray(manifest.patchExtras)||manifest.patchExtras.length!==6||!manifest.patchAudio)
-    throw new Error('Prepared soundtrack is incomplete; expected metadata-only Frosty payload plus 192 Data and 7 Patch waves');
+  if(manifest.id!==path.basename(folder)||manifest.frostyPayloadMode!=='metadata-with-layered-audio-overlay'||
+     !Array.isArray(manifest.placements)||!manifest.placements.length||
+     !manifest.placements.every(item=>item&&item.layer==='Data'&&item.chunkId&&item.audioSha256))
+    throw new Error('Prepared soundtrack is incomplete or is not a validated layered-audio build');
+  const patchItems=[...(Array.isArray(manifest.patchExtras)?manifest.patchExtras:[]),manifest.patchAudio].filter(Boolean);
+  const expectedCount=manifest.placements.length+patchItems.length;
+  const fullBuild=manifest.placements.length===192&&patchItems.length===7;
+  const isolatedV41=manifest.compatibilityMode==='v41-isolated-contexts'&&manifest.placements.length===19&&patchItems.length===0;
+  if(!fullBuild&&!isolatedV41)
+    throw new Error('Unsupported soundtrack layout: '+manifest.placements.length+' Data + '+patchItems.length+' Patch waves');
   const metadataName=manifest.metadataFile||'intro-playlist-metadata.fbmod';
   const metadata=path.resolve(folder,metadataName);
   if(path.dirname(metadata)!==folder||!fs.existsSync(metadata)||fs.statSync(metadata).size<1024)
     throw new Error('Metadata Frosty mod file is missing or invalid');
   const rows=fs.readFileSync(path.join(folder,'waves.tsv'),'utf8').trim().split(/\r?\n/);
-  if(rows.length!==199)throw new Error('Audio manifest does not contain all 199 soundtrack chunks');
+  if(rows.length!==expectedCount)throw new Error('Audio manifest count does not match the prepared soundtrack');
   const expectedAudio=new Map();
-  for(const item of [...manifest.placements,...manifest.patchExtras,manifest.patchAudio]){
+  for(const item of [...manifest.placements,...patchItems]){
     if(!item||!item.name||!item.audioSha256||!Number.isInteger(item.audioBytes)||expectedAudio.has(item.name))
       throw new Error('Prepared build has incomplete or duplicate audio metadata');
     expectedAudio.set(item.name,{sha256:item.audioSha256,bytes:item.audioBytes});

@@ -1,4 +1,4 @@
-NFS HEAT MUSIC BUILDER V5 BETA 4
+NFS HEAT MUSIC BUILDER V5 BETA 5 — ONE-TRACK COMPATIBILITY TEST
 
 This test build uses its own manager based on the current GPLv3 Frosty source. It is not a claim of compatibility with the official Frosty Mod Manager 1.0.6.3.
 
@@ -17,7 +17,7 @@ Steam installations are launched through Steam AppID 1222680 so the dataPath rea
 FIRST RUN
 Internet access may be required by the existing audio setup to obtain its separately distributed conversion dependencies. The NFS Heat encryption key is extracted from the user's installed copy of the game and is never included in this package.
 
-The builder creates a verified portable baseline from the player's own original game files on the first build and reuses it later. Beta 4 keeps the soundtrack FBMOD metadata-only, then installs each streamed audio chunk in the same Data or Patch layer as the original resource. All 199 exact CAS intervals are checked before the profile becomes active. Original playlist exit-marker behavior and race-intro timing markers are preserved.
+The builder creates a verified portable baseline from the player's own original game files on the first build and reuses it later. With exactly one source song, Beta 5 uses the isolated 19-wave layout proven by V4.1 (five gameplay contexts, menu lead/loop and day/night race intros) instead of duplicating the same song through all 199 resources. Multi-song libraries continue to use the complete layered layout. Every generated CAS interval is checked before the profile becomes active.
 
 LICENSES AND SOURCE
 Application source and Frosty integration changes are published with the repository. Frosty GPL notices and the pinned-source patch are included in licenses and source. No UNITE files, user music, game files, encryption keys, caches or generated profiles are distributed here.

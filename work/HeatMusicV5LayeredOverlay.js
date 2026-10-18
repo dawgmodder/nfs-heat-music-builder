@@ -160,7 +160,8 @@ function patchDataLayer(staging, buildDir, manifest, gameRoot) {
 }
 function patchPatchLayer(staging, buildDir, manifest, gameRoot) {
   const items = [manifest.patchAudio, ...(manifest.patchExtras || [])].filter(Boolean);
-  if (items.length !== 7) throw new Error(`Expected 7 Patch music chunks, found ${items.length}`);
+  if (!items.length) return [];
+  if (items.length !== 7) throw new Error(`Expected either 0 or 7 Patch music chunks, found ${items.length}`);
   const patch = path.join(staging, 'Patch');
   const tocFile = path.join(patch, 'Win32', 'chunks0.toc');
   const casFile = path.join(patch, 'Win32', 'configurations', 'superbundleinstallpackage2', 'cas_14.cas');
@@ -208,8 +209,8 @@ function patchPatchLayer(staging, buildDir, manifest, gameRoot) {
   return installed;
 }
 function validateInstalled(staging, buildDir, manifest, dataInstalled, patchInstalled) {
-  if (!Array.isArray(manifest.placements) || manifest.placements.length !== 192)
-    throw new Error('Expected 192 Data music placements');
+  if (!Array.isArray(manifest.placements) || !manifest.placements.length)
+    throw new Error('Prepared soundtrack has no Data music placements');
   const dataToc = fs.readFileSync(path.join(staging, 'Data', 'Win32', 'chunks0.toc'));
   let checked = 0;
   for (const row of dataInstalled) {
@@ -230,7 +231,8 @@ function validateInstalled(staging, buildDir, manifest, dataInstalled, patchInst
       throw new Error(`Installed Patch payload mismatch: ${row.item.name}`);
     checked++;
   }
-  if (checked !== 199) throw new Error(`Layered audio validation count mismatch: ${checked}/199`);
+  const expected=manifest.placements.length+patchInstalled.length;
+  if (checked !== expected) throw new Error(`Layered audio validation count mismatch: ${checked}/${expected}`);
   return checked;
 }
 function applyLayeredOverlay({ staging, buildDir, gameRoot }) {

@@ -337,8 +337,10 @@ const manifest={id:buildId,slots:config.slots,actualMenuSource:menuSource,
     wav:item.wav,duration:item.duration,before:item.before,after:item.after,
     gainDb:item.gain,method:item.method})),
   encodedMeasurements,sourceDataTocSha256:sha(baselineToc),tocSha256:sha(toc),casBytes:cursors,
-  frostyPayloadMode:'metadata-with-layered-audio-overlay',placements:placements.map((item,index)=>({name:item.name,
-    chunkId:index<5?five[index].id:null,layer:'Data',tocOffset:item.tocOffset,cas:item.cas,newOffset:item.newOffset,newSize:item.newSize,
+  frostyPayloadMode:'metadata-with-layered-audio-overlay',compatibilityMode:'v41-isolated-contexts',metadataFile:'metadata.fbmod',placements:placements.map((item,index)=>({name:item.name,
+    chunkId:index<5?five[index].id:index===5?menuLoopBase.menuChunk:index===6?menuLeadBase.menuChunk:
+      introBase.placements[index-7].chunkId,
+    layer:'Data',tocOffset:item.tocOffset,cas:item.cas,newOffset:item.newOffset,newSize:item.newSize,
     audioBytes:item.ea.bytes,audioSha256:item.ea.sha256,seconds:item.ea.seconds}))};
 fs.writeFileSync(path.join(folder,'manifest.json'),JSON.stringify(manifest,null,2),{flag:'wx'});
 const metadata=path.join(folder,'metadata.fbmod');
