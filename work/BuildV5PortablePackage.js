@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('fs'),path=require('path');
 const repo=path.resolve(__dirname,'..'),root=path.resolve(repo,'..');
-const finalTarget=path.join(root,'output','HeatMusicPortableV5_Beta7_FullPlaylists');
+const finalTarget=path.join(root,'output','HeatMusicPortableV5_Beta7_1_UniteFix');
 const target=finalTarget+'.building';
 const baseline=path.join(root,'output','HeatMusicPortableV4_1_Distribution');
 const frostBuild=path.join(root,'frostysource-current','FrostyCli','bin','Release','net8.0');
@@ -15,7 +15,7 @@ const workFiles=[
   'HeatMusicAutoPlanner.js','HeatMusicSingleTrackV41Builder.js','HeatMusicPortableEntry.js','HeatMusicPortableSetup.js','HeatVisualTheme.cs','HeatMusicBrand.cs','HeatGameLauncher.cs','HeatMusicPresetStore.cs','HeatMusicAudioCache.js','HeatMusicPaths.js','ExtractOwnedGameKey.js','BuildPortableBaseline.js','HeatMusicCancellation.js','HeatMusicTiming.js','HeatMusicEaLayer3.js','HeatMusicEaEncoder.js','HeatMusicGameAudit.js','HeatMusicBuilder.js','HeatMusicPlaylistBuilder.js','HeatMusicBuildFolders.js','RunHeatMetadata.js','ExportPreparedHeatMusic.js','HeatMusicIntroPlaylistBuilder.js','NormalizeUnsafeAudio.js','EaBitrateCandidates.js','EaPartialDuration.js','InstallPreparedHeatMusic.js','VerifyPreparedHeatMusicIntroPlaylists.js','VerifyPreparedHeatMusicPlaylist.js','MeasurePlanLoudness.js','FrostyGplManager.js','HeatMusicV5LayeredOverlay.js','HeatFbPack.cs','HeatMusicModManagerPanel.cs','HeatMusicInstallerV3.cs','HeatMusicPlanEditor.cs'
 ];
 fs.mkdirSync(path.join(target,'work'),{recursive:true});
-copy(path.join(__dirname,'HeatMusicInstallerV5Beta7.exe'),path.join(target,'HeatMusicInstallerV5Beta7.exe'));
+copy(path.join(__dirname,'HeatMusicInstallerV5Beta7_1.exe'),path.join(target,'HeatMusicInstallerV5Beta7_1.exe'));
 copy(path.join(__dirname,'README-English-V5-Test.txt'),path.join(target,'README.txt'));
 copy(path.join(baseline,'runtime','node.exe'),path.join(target,'runtime','node.exe'));
 copy(path.join(baseline,'NODE-LICENSE.txt'),path.join(target,'licenses','NODE-LICENSE.txt'));
@@ -35,6 +35,7 @@ copyTree(path.join(repo,'frostygpl','FrostyPayloadAudit'),path.join(target,'sour
 copy(path.join(repo,'docs','v5-validation.md'),path.join(target,'docs','v5-validation.md'));
 copy(path.join(repo,'docs','v5-beta6-address-test.md'),path.join(target,'docs','v5-beta6-address-test.md'));
 copy(path.join(repo,'docs','v5-beta7-full-playlists.md'),path.join(target,'docs','v5-beta7-full-playlists.md'));
+copy(path.join(repo,'docs','v5-beta7-1-unite-fix.md'),path.join(target,'docs','v5-beta7-1-unite-fix.md'));
 for(const folder of ['direct-track24-ealayer3-all-test','direct-track24-menu-loop-test','direct-track24-menu-lead-loop-test','direct-track24-race-intro-test']){
   const source=path.join(baseline,'output',folder,'manifest.json');if(fs.existsSync(source))copy(source,path.join(target,'output',folder,'manifest.json'));
 }

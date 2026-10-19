@@ -11,11 +11,14 @@ const { applyLayeredOverlay } = require('./HeatMusicV5LayeredOverlay');
 
 let signalCancellation = false;
 let cleanupStaging = null;
+let logFile = null;
 process.on('SIGINT', () => { signalCancellation = true; });
 process.on('SIGTERM', () => { signalCancellation = true; });
 
 function emit(type, detail = {}) {
-  process.stdout.write(`${JSON.stringify({ type, ...detail })}\n`);
+  const line = `${JSON.stringify({ time: new Date().toISOString(), type, ...detail })}\n`;
+  if (logFile) fs.appendFileSync(logFile, line, 'utf8');
+  process.stdout.write(line);
 }
 
 function assertFile(file, label) {
@@ -70,6 +73,11 @@ async function main() {
   if (process.argv.length !== 3) throw new Error('Usage: node FrostyGplManager.js <config.json>');
   const configPath = path.resolve(process.argv[2]);
   assertFile(configPath, 'Configuration');
+  const logDir = path.join(path.dirname(configPath), 'logs');
+  fs.mkdirSync(logDir, { recursive: true });
+  logFile = path.join(logDir, `manager-${new Date().toISOString().replace(/[:.]/g, '-')}-${process.pid}.log`);
+  fs.writeFileSync(logFile, '', { flag: 'wx' });
+  emit('log-file', { file: logFile });
   const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
   const gameExe = path.resolve(config.gameExe || '');
   const cli = path.resolve(config.frostyCli || '');

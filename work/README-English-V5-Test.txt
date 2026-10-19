@@ -1,8 +1,9 @@
-NFS HEAT MUSIC BUILDER V5 BETA 7 — FULL PLAYLISTS TEST
+NFS HEAT MUSIC BUILDER V5 BETA 7.1 — UNITE TABLE FIX TEST
 
 This is a test build, not a stable release. It retains the catalog address fix and
-restores full coverage for one-song libraries. See docs/v5-beta7-full-playlists.md.
-The white/pink garage issue is not fixed. In-game confirmation is still required.
+retains full coverage for one-song libraries and resolves music entries by GUID
+after UNITE/Frosty reorganizes chunk tables. See docs/v5-beta7-1-unite-fix.md.
+Combined-profile gameplay and the earlier graphics issue still need confirmation.
 
 This test build uses its own manager based on the current GPLv3 Frosty source. It is not a claim of compatibility with the official Frosty Mod Manager 1.0.6.3.
 
@@ -14,7 +15,7 @@ WORKFLOW
 5. The custom soundtrack is always applied last.
 6. Click APPLY MODS AND LAUNCH.
 
-Importing only records the package and selection. Launch prepares a temporary profile, validates it, preserves the previous working profile on failure or cancellation, then starts NFS Heat with ModData/HeatMusicV5Beta7FullPlaylists. Previous HeatMusicV5 and Beta6 profiles are not replaced.
+Importing only records the package and selection. Launch prepares a temporary profile, validates it, preserves the previous working profile on failure or cancellation, then starts NFS Heat with ModData/HeatMusicV5Beta7_1Unite. Previous profiles are not replaced. Each assembly saves a timestamped log under output/frosty-v5-session/logs, including errors after the window is closed.
 
 Steam installations are launched through Steam AppID 1222680 so the dataPath reaches the game. The package includes Frosty's GPL-distributed CryptBase launch shim and copies it beside the game executable only when it is absent; an existing file is never overwritten. EA App-only installations receive both -dataPath and GAME_DATA_DIR, but still require separate gameplay confirmation.
 
@@ -27,7 +28,7 @@ LICENSES AND SOURCE
 Application source and Frosty integration changes are published with the repository. Frosty GPL notices and the pinned-source patch are included in licenses and source. No UNITE files, user music, game files, encryption keys, caches or generated profiles are distributed here.
 
 TEST STATUS
-Address and coverage regressions exercise production code. See the Beta7 report for the completed build/assembly audits and remaining gameplay checks. Historic hash counts alone must not be interpreted as gameplay approval.
+Address, coverage and relocated-table regressions exercise production code. See the Beta7.1 report for completed assembly audits and remaining gameplay checks. Historic hash counts alone must not be interpreted as gameplay approval.
 
 LOCAL AUDIO TEST
 Use MODS & LAUNCH with the prepared soundtrack and other mods unchecked first.

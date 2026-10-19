@@ -108,12 +108,15 @@ function patchDataLayer(staging, buildDir, manifest, gameRoot) {
     fs.readFileSync(path.join(buildDir, 'chunks0.toc')), manifest.placements);
   const originalToc = fs.readFileSync(originalTocFile);
   const stagingToc = fs.readFileSync(sourceToc);
+  const locations = new Map();
   for (const item of manifest.placements) {
-    const at = item.tocOffset;
-    if (locateChunk(originalToc, item.chunkId) !== at || locateChunk(stagingToc, item.chunkId) !== at)
-      throw new Error(`Data chunk table changed: ${item.name}`);
-    if (stagingToc.subarray(at, at + 12).compare(originalToc.subarray(at, at + 12)) !== 0)
+    const originalAt = locateChunk(originalToc, item.chunkId);
+    const at = locateChunk(stagingToc, item.chunkId);
+    if (originalAt !== item.tocOffset)
+      throw new Error(`Original Data chunk identity changed: ${item.name}`);
+    if (stagingToc.subarray(at, at + 12).compare(originalToc.subarray(originalAt, originalAt + 12)) !== 0)
       throw new Error(`Data music chunk conflicts with another selected mod: ${item.name}`);
+    locations.set(item.chunkId, at);
   }
   // Materialize every destination catalog before replacing files. A directory
   // junction at a destination would otherwise redirect writes into the game.
@@ -153,7 +156,7 @@ function patchDataLayer(staging, buildDir, manifest, gameRoot) {
         const wrapped = wrapEa(raw);
         if (cursor + wrapped.length > 0xffffffff)
           throw new Error(`Data cas_${String(casNumber).padStart(2, '0')} exceeds the 32-bit offset limit`);
-        const at = item.tocOffset;
+        const at = locations.get(item.chunkId);
         writeLocation(toc, at, { ...loc, offset: cursor, size: wrapped.length });
         fs.appendFileSync(casTemp, wrapped);
         installed.push({ item, offset: cursor, size: wrapped.length, cas: casFile });
@@ -183,9 +186,17 @@ function patchPatchLayer(staging, buildDir, manifest, gameRoot) {
   assertFile(originalTocFile, 'Original game Patch chunks0.toc');
   const originalToc = fs.readFileSync(originalTocFile);
   const catalogs = readCatalogs(staging);
+  const locations = new Map();
   for (const item of items) {
-    if (locateChunk(originalToc, item.chunkId) !== item.tocOffset || locateChunk(toc, item.chunkId) !== item.tocOffset)
-      throw new Error(`Patch chunk table changed: ${item.name}`);
+    const originalAt = locateChunk(originalToc, item.chunkId);
+    const at = locateChunk(toc, item.chunkId);
+    if (originalAt !== item.tocOffset)
+      throw new Error(`Original Patch chunk identity changed: ${item.name}`);
+    if (originalToc.subarray(originalAt, originalAt + 12).toString('hex') !== item.oldLocation)
+      throw new Error(`Patch music identity no longer matches the installed game: ${item.name}`);
+    if (readLocation(toc, at).size === 0)
+      throw new Error(`Selected mods left an invalid Patch chunk record: ${item.name}`);
+    locations.set(item.chunkId, at);
     const loc = { ...readLocation(originalToc, item.tocOffset), patch: true, cas: 14 };
     if (resolveCas(staging, loc, catalogs).toLowerCase() !== casFile.toLowerCase())
       throw new Error(`Unexpected Patch music catalog: ${item.name}`);
@@ -196,13 +207,7 @@ function patchPatchLayer(staging, buildDir, manifest, gameRoot) {
   const installed = [];
   try {
     for (const item of items) {
-      const at = item.tocOffset;
-      if (!Number.isInteger(at) || at < 0 || at + 12 > toc.length || at + 12 > originalToc.length)
-        throw new Error(`Invalid Patch TOC offset: ${item.name}`);
-      if (originalToc.subarray(at, at + 12).toString('hex') !== item.oldLocation)
-        throw new Error(`Patch music identity no longer matches the installed game: ${item.name}`);
-      if (toc.readUInt32BE(at + 8) === 0)
-        throw new Error(`Selected mods left an invalid Patch chunk record: ${item.name}`);
+      const at = locations.get(item.chunkId);
       const relative = item.audioFile || 'playlist-patch.ealayer3';
       const audio = path.resolve(buildDir, relative);
       if (!audio.startsWith(buildDir + path.sep)) throw new Error(`Unsafe Patch audio path: ${item.name}`);
@@ -212,7 +217,7 @@ function patchPatchLayer(staging, buildDir, manifest, gameRoot) {
         throw new Error(`Prepared Patch audio checksum mismatch: ${item.name}`);
       const wrapped = wrapEa(raw);
       if (cursor + wrapped.length > 0xffffffff) throw new Error('Patch music CAS exceeds the 32-bit offset limit');
-      writeLocation(toc, at, { ...readLocation(originalToc, at), patch: true, cas: 14, offset: cursor, size: wrapped.length });
+      writeLocation(toc, at, { ...readLocation(originalToc, item.tocOffset), patch: true, cas: 14, offset: cursor, size: wrapped.length });
       fs.appendFileSync(casTemp, wrapped);
       installed.push({ item, offset: cursor, size: wrapped.length, audio });
       cursor += wrapped.length;
