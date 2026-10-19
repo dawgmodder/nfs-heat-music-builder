@@ -85,6 +85,8 @@ async function main() {
   assertFile(dotnet, '.NET host');
   assertFile(key, 'NFS Heat initfs key');
   assertFile(path.join(musicBuildDir, 'manifest.json'), 'Prepared soundtrack manifest');
+  const soundtrackManifest=JSON.parse(fs.readFileSync(path.join(musicBuildDir,'manifest.json'),'utf8'));
+  emit('validated-coverage',require('./HeatMusicCoverage').assertFullCoverage(soundtrackManifest,path.resolve(__dirname,'..')));
   if (!selected.length) throw new Error('At least one FBMOD must be selected.');
   selected.forEach((file, index) => assertFile(file, `FBMOD ${index + 1}`));
   if (new Set(selected.map(file => file.toLowerCase())).size !== selected.length) {

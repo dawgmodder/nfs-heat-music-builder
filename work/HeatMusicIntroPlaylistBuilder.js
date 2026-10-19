@@ -345,6 +345,9 @@ async function main(){
   manifest.metadataFile='intro-playlist-metadata.fbmod';
   if(manifest.placements.length!==192||manifest.patchExtras.length!==6)
     throw new Error('Expected 192 Data and 7 Patch resources in total');
+  delete manifest.compatibilityMode;
+  manifest.coverage=require('./HeatMusicCoverage').assertFullCoverage(manifest,root);
+  console.log('FULL_SOUNDTRACK_COVERAGE',JSON.stringify(manifest.coverage));
   fs.writeFileSync(manifestFile,JSON.stringify(manifest,null,2));
   require('./RunHeatMetadata').runMetadata(metadataBuilder,['dynamicallintro',path.join(folder,'waves.tsv'),
     path.join(folder,manifest.metadataFile)],{cwd:root});

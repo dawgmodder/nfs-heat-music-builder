@@ -1,8 +1,8 @@
 'use strict';
 
-// A one-song library does not need to rewrite every licensed wave in the game.
-// Reuse the isolated V4.1 topology that was confirmed in gameplay: one complete
-// wave per context, the two menu waves and one day/night race-intro sequence.
+// Retired Beta5 diagnostic builder. Its 19-resource layout does NOT reproduce
+// full V4.1 coverage. The normal planner uses HeatMusicIntroPlaylistBuilder for
+// every library size; the exporter/manager reject this partial layout.
 const fs=require('fs');
 const path=require('path');
 const crypto=require('crypto');
@@ -54,4 +54,3 @@ async function main(){
   await run('ExportPreparedHeatMusic.js',[folder],120000);
 }
 if(require.main===module)main().catch(error=>{console.error('ERROR:',error.stack||error.message);process.exitCode=1;});
-
