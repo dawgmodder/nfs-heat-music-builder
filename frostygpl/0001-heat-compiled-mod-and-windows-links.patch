@@ -75,6 +75,38 @@ index 3c21afa..53854ca 100644
 -}
 \ No newline at end of file
 +}
+diff --git a/FrostyModSupport/BinaryBundle.cs b/FrostyModSupport/BinaryBundle.cs
+index 775b561..0d9ce01 100644
+--- a/FrostyModSupport/BinaryBundle.cs
++++ b/FrostyModSupport/BinaryBundle.cs
+@@ -157,7 +157,9 @@ public static class BinaryBundle
+             {
+                 ResModEntry modEntry = inModifiedRes[name];
+                 res[i] = modEntry;
+-                sha1[i] = modEntry.Sha1;
++                // SHA-1s share one EBX/RES/chunk table. i is RES-local;
++                // j includes the preceding EBX entries (and additions).
++                sha1[j] = modEntry.Sha1;
+                 modify(modEntry, j, false, true, originalSize);
+             }
+             else
+@@ -206,7 +208,8 @@ public static class BinaryBundle
+             {
+                 ChunkModEntry modEntry = inModifiedChunks[id];
+                 chunks[i] = modEntry;
+-                sha1[i] = modEntry.Sha1;
++                // Do not overwrite the hashes at the start of the EBX table.
++                sha1[j] = modEntry.Sha1;
+                 modify(modEntry, j, false, true, (logicalOffset & 0xFFFF) | logicalSize);
+ 
+                 if (modEntry.FirstMip != -1)
+@@ -339,4 +342,4 @@ public static class BinaryBundle
+ 
+         return retVal;
+     }
+-}
+\ No newline at end of file
++}
 diff --git a/FrostyModSupport/FileSystemLinker.cs b/FrostyModSupport/FileSystemLinker.cs
 new file mode 100644
 index 0000000..4058596
@@ -266,6 +298,13 @@ index e9dadec..0b66d18 100644
              // add existing Bundles
              entry.Bundles.UnionWith(existing.Bundles);
  
+@@ -838,4 +863,4 @@ public static class AssetManager
+     }
+ 
+     #endregion
+-}
+\ No newline at end of file
++}
 diff --git a/FrostySdk/Managers/Loaders/Manifest2019AssetLoader.cs b/FrostySdk/Managers/Loaders/Manifest2019AssetLoader.cs
 index e86602a..122f7a6 100644
 --- a/FrostySdk/Managers/Loaders/Manifest2019AssetLoader.cs
@@ -298,3 +337,10 @@ index e86602a..122f7a6 100644
                  }
  
                  chunkData.Dispose();
+@@ -351,4 +352,4 @@ public class Manifest2019AssetLoader : IAssetLoader
+                 throw new UnknownValueException<byte>("file identifier flag", inFlag);
+         }
+     }
+-}
+\ No newline at end of file
++}

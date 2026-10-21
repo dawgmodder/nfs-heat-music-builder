@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
+    <FrostyBuildDirectory Condition="'$(FrostyBuildDirectory)' == ''">$(MSBuildThisFileDirectory)../../../frostysource-current/FrostyCli/bin/Release/net8.0</FrostyBuildDirectory>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="FrostySdk"><HintPath>$(FrostyBuildDirectory)/FrostySdk.dll</HintPath></Reference>
+    <Reference Include="FrostyModSupport"><HintPath>$(FrostyBuildDirectory)/FrostyModSupport.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

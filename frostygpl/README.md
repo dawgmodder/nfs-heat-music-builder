@@ -13,7 +13,13 @@ The V5 branch replaces the unsupported Frosty 1.0.6.3 global-chunk workaround wi
 - License: GNU GPL v3 (the upstream `LICENSE` file remains authoritative).
 - Local changes: [`0001-heat-compiled-mod-and-windows-links.patch`](0001-heat-compiled-mod-and-windows-links.patch)
 
-The patch enables compiled-mod application without generating a type SDK, adds a Windows link fallback (symbolic link, then hard link, then copy), and preserves high-priority Manifest2019 chunk locations while loading lower-priority base TOCs. This lets a normal non-administrator account build an isolated ModData directory without base audio silently replacing soundtrack chunks supplied by the mod.
+The patch enables compiled-mod application without generating a type SDK, adds a Windows link fallback, preserves high-priority Manifest2019 chunk locations in the SDK, and fixes combined SHA-1 table indexing for RES/chunk edits. The SDK precedence change alone does not prove that the game reads the same resources; the separate layered audio writer and direct file audits are required.
+
+Beta 7.2 fixes a verified bundle-writer bug: RES/chunk edits previously overwrote
+SHA-1 slots at the beginning of the EBX table. See
+[`v5-beta7-2-bundle-hashes.md`](../docs/v5-beta7-2-bundle-hashes.md) and
+[`BinaryBundleRegression`](BinaryBundleRegression). Garage rendering still needs
+user confirmation; payload hashes alone are not gameplay validation.
 
 To reproduce the engine, clone the pinned upstream commit, apply the patch, and build `FrostyCli` with the .NET 8 SDK. Distribution packages must include the GPL notice and make the complete corresponding Frosty source available.
 

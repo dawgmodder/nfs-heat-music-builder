@@ -102,6 +102,9 @@ async function main() {
   }
 
   const cliDir = path.dirname(cli);
+  // Record the exact assembly implementation, not just the CLI wrapper version.
+  emit('runtime', { assemblies: Object.fromEntries(['FrostyCli.dll', 'FrostySdk.dll', 'FrostyModSupport.dll']
+    .map(name => [name, sha256(path.join(cliDir, name))])) });
   const modsDir = path.join(workDir, 'mods');
   const cacheDir = path.resolve(config.cacheDir || path.join(workDir, 'updated-cache'));
   const modDataParent = path.dirname(modData);
