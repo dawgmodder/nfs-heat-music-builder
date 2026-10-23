@@ -46,3 +46,15 @@ presented as passing. No game launch was performed by the diagnostic tool.
 Gameplay confirmation is pending. If the new profile fixes rendering, investigate
 global stream resolution before designing a general solution. If it does not,
 do not broaden this patch blindly to other chunks or alter lighting values.
+
+## User result: rendering still broken
+
+The user subsequently reported that this diagnostic did not resolve the issue.
+Revalidation confirms the separate profile remains intact and all 199 audio
+resources still match. The game was closed at inspection, so its actual command
+line could not be captured. Do not promote this experiment to a production fix.
+
+The local render settings contain `GstRender.HDRMode 1`. This is only a new
+configuration observation, not a diagnosis or a confirmed enumeration mapping.
+A controlled in-game HDR Off comparison is appropriate before further asset
+changes. No graphics settings were changed automatically.
