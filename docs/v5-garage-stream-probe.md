@@ -58,3 +58,27 @@ The local render settings contain `GstRender.HDRMode 1`. This is only a new
 configuration observation, not a diagnosis or a confirmed enumeration mapping.
 A controlled in-game HDR Off comparison is appropriate before further asset
 changes. No graphics settings were changed automatically.
+
+## Follow-up: graphics settings did not resolve it
+
+The user reports that disabling graphics options and using Low quality did not
+resolve the white/pink rendering. They also confirmed it occurs only inside the
+garage, not on daytime or nighttime streets. Do not repeat the HDR/quality
+suggestion as a fix or treat it as the established cause.
+
+A read-only inspection decoded and deserialized 20 bounded CAS inputs: ten
+original garage EBX resources and their ten UNITE counterparts. It used the
+official SDK for EBX interpretation, not AssetManager resolution as proof of
+which resources the running game loads. In `playergarage_ve`, observed changes
+include Sky LuminanceScale 983 -> 64000, DynamicLRVSkyScale 1 -> 20, and
+ExposureCompensation 1 -> -2. These are coordinated mod authoring changes,
+not independently proven defects. No lighting values were changed.
+
+The UNITE author's description documents an optional **Revert To Default Garage**
+addon, restoring the vanilla daytime garage rather than UNITE's nighttime one:
+https://www.nexusmods.com/needforspeedheat/mods/37?tab=description
+
+That addon is a potential controlled isolation test/workaround, not a confirmed
+repair of the customized garage. Applying it changes the intended appearance,
+so obtain the user's choice first. It has not been downloaded, applied, or
+tested here. No new production fix or game-play success is claimed.
