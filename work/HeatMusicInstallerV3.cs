@@ -53,8 +53,8 @@ internal sealed class HeatMusicInstallerV3 : Form
         editor=new HeatMusicPlanEditor();
         script=Path.Combine(workspace,"work",portable?"HeatMusicPortableEntry.js":"HeatMusicAutoPlanner.js");
         node=portable?Path.Combine(workspace,"runtime","node.exe"):@"C:\Program Files\nodejs\node.exe";
-        Text="NFS Heat — Music Builder V5 Beta 7.2 — Bundle Hash Test";
-        Icon=HeatMusicBrand.CreateIcon();notifier.Icon=Icon;notifier.Text="Heat Music Builder 4";
+        Text="NFS Heat — Music Builder V5 Beta 7.3";
+        Icon=HeatMusicBrand.CreateIcon();notifier.Icon=Icon;notifier.Text="Heat Music Builder V5 Beta 7.3";
         notifier.BalloonTipClicked+=(s,e)=>{Show();WindowState=FormWindowState.Normal;Activate();};
         notifier.DoubleClick+=(s,e)=>{Show();WindowState=FormWindowState.Normal;Activate();};
         Width=1180;Height=850;MinimumSize=new Size(1060,760);
@@ -188,7 +188,7 @@ internal sealed class HeatMusicInstallerV3 : Form
         panel.Controls.Add(new Label{Text="ACTIVITY LOG",Dock=DockStyle.Fill,ForeColor=HeatVisualTheme.Muted,Font=HeatVisualTheme.Ui(9,FontStyle.Bold)},0,5);
         log.BorderStyle=BorderStyle.None;log.Margin=Padding.Empty;
         panel.Controls.Add(log,0,6);panel.SetColumnSpan(log,3);
-        Append("V5 Beta 7.2: fixes RES/chunk SHA-1 table indexing in the Frosty bundle writer. Existing converted music can be reused; use MODS & LAUNCH to assemble a fresh profile. Garage graphics still require in-game confirmation. Test profile: HeatMusicV5Beta7_2Hashes. Logs: output/frosty-v5-session/logs.");
+        Append("V5 Beta 7.3: lower mods in the list override upper mods; soundtrack has highest priority. Default Garage is an optional UNITE addon, not required or included. Profile files are validated before and after publication. Compatible converted audio is reused. Profile: HeatMusicV5Beta7_3. Logs: output/frosty-v5-session/logs.");
         FormClosing+=HandleFormClosing;
         Append("DURATION: no maximum track length is imposed. Long tracks remain subject to converter, file-size and integrity checks.");
         FormClosed+=(s,e)=>{notifier.Visible=false;notifier.Dispose();editor.Dispose();};

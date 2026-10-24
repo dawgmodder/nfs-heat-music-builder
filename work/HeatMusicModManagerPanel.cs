@@ -30,11 +30,11 @@ internal sealed class HeatMusicModManagerPanel : UserControl
         BackColor=HeatVisualTheme.Asphalt;ForeColor=HeatVisualTheme.Text;
         var layout=new TableLayoutPanel{Dock=DockStyle.Fill,Padding=new Padding(28,24,28,24),ColumnCount=2,RowCount=6};
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,72));layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,28));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute,72));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,44));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute,64));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,84));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent,45));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,48));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute,58));layout.RowStyles.Add(new RowStyle(SizeType.Percent,55));
         var title=new Label{Text="ONE LOAD ORDER. ONE LAUNCH.",Dock=DockStyle.Fill,Font=HeatVisualTheme.Ui(22,FontStyle.Bold)};
-        var help=new Label{Text="Import the original UNITE FBPACK or add individual FBMODs. Choose components below; the soundtrack is always applied last.",Dock=DockStyle.Fill,ForeColor=HeatVisualTheme.Muted};
+        var help=new Label{Text="Import UNITE FBPACK or add FBMODs. Lower items override upper items; the soundtrack has highest priority.\nOptional garage workaround: add the official 'Revert To Default Garage.fbmod' using ADD FBMOD, place it BELOW UNITE and check it only if needed. It is not required or bundled.",Dock=DockStyle.Fill,ForeColor=HeatVisualTheme.Muted};
         layout.Controls.Add(title,0,0);layout.SetColumnSpan(title,2);layout.Controls.Add(help,0,1);layout.SetColumnSpan(help,2);
         mods.Dock=DockStyle.Fill;mods.BackColor=HeatVisualTheme.Void;mods.ForeColor=HeatVisualTheme.Text;mods.BorderStyle=BorderStyle.FixedSingle;mods.CheckOnClick=true;
         mods.ItemCheck+=HandleItemCheck;
@@ -59,7 +59,7 @@ internal sealed class HeatMusicModManagerPanel : UserControl
     private void MoveUp(object sender,EventArgs e){MoveSelected(-1);}private void MoveDown(object sender,EventArgs e){MoveSelected(1);}
     private void MoveSelected(int delta){int from=mods.SelectedIndex,to=from+delta;if(from<0||to<0||to>=mods.Items.Count)return;var item=(HeatModChoice)mods.Items[from];bool check=mods.GetItemChecked(from);changingChecks=true;mods.Items.RemoveAt(from);mods.Items.Insert(to,item);mods.SetItemChecked(to,check);changingChecks=false;mods.SelectedIndex=to;SaveState();}
     public void SelectSoundtrack(string file){if(File.Exists(file)){soundtrackPath=Path.GetFullPath(file);UpdateSoundtrack();SaveState();}}
-    private void UpdateSoundtrack(){soundtrack.Text=String.IsNullOrEmpty(soundtrackPath)?"SOUNDTRACK: build or select a soundtrack first":"SOUNDTRACK (APPLIED LAST): "+Path.GetFileName(soundtrackPath);}
+    private void UpdateSoundtrack(){soundtrack.Text=String.IsNullOrEmpty(soundtrackPath)?"SOUNDTRACK: build or select a soundtrack first":"SOUNDTRACK (HIGHEST PRIORITY): "+Path.GetFileName(soundtrackPath);}
     public void CancelSafely(){try{if(running!=null&&!running.HasExited&&!String.IsNullOrEmpty(cancelPath))File.WriteAllText(cancelPath,"Cancel requested at "+DateTime.UtcNow.ToString("O"),new UTF8Encoding(false));}catch{} }
 
     private void HandleItemCheck(object sender,ItemCheckEventArgs e)
@@ -89,7 +89,7 @@ internal sealed class HeatMusicModManagerPanel : UserControl
         try{for(int i=0;i<mods.Items.Count;i++)if(mods.GetItemChecked(i))selected.Add(HeatFbPack.Extract((HeatModChoice)mods.Items[i],extraction));}
         catch(Exception ex){MessageBox.Show(this,"Could not prepare FBPACK: "+ex.Message);return;}
         string session=Path.Combine(workspace,"output","frosty-v5-session");Directory.CreateDirectory(session);
-        string modData=Path.Combine(game,"ModData","HeatMusicV5Beta7_2Hashes");string config=Path.Combine(session,"manager-config.json");cancelPath=config+".cancel";if(File.Exists(cancelPath))File.Delete(cancelPath);
+        string modData=Path.Combine(game,"ModData","HeatMusicV5Beta7_3");string config=Path.Combine(session,"manager-config.json");cancelPath=config+".cancel";if(File.Exists(cancelPath))File.Delete(cancelPath);
         var data=new Dictionary<string,object>{{"gameExe",exe},{"frostyCli",cli},{"dotnet",dotnet},{"initFsKey",key},
             {"workDir",Path.Combine(session,"work")},{"cacheDir",Path.Combine(workspace,"output","frosty-v5-cache")},{"cancelFile",cancelPath},{"modDataDir",modData},{"mods",selected.ToArray()},{"musicMod",soundtrackPath},{"musicBuildDir",musicBuildDir}};
         File.WriteAllText(config,new JavaScriptSerializer().Serialize(data),new UTF8Encoding(false));
@@ -98,7 +98,7 @@ internal sealed class HeatMusicModManagerPanel : UserControl
             UseShellExecute=false,RedirectStandardOutput=true,RedirectStandardError=true,CreateNoWindow=true,StandardOutputEncoding=Encoding.UTF8,StandardErrorEncoding=Encoding.UTF8},EnableRaisingEvents=true};
         var process=running;process.OutputDataReceived+=(s,a)=>{if(a.Data!=null)Append(a.Data);};process.ErrorDataReceived+=(s,a)=>{if(a.Data!=null)Append("ERROR "+a.Data);};
         process.Exited+=(s,a)=>{process.WaitForExit();int code=process.ExitCode;BeginInvoke(new Action(()=>{running=null;launch.Enabled=true;process.Dispose();
-            if(code==0){notify("Mods ready","Launching NFS Heat with the combined profile.",false);try{HeatGameLauncher.Launch(game,"ModData/HeatMusicV5Beta7_2Hashes",Path.Combine(workspace,"runtime"),Append);}catch(Exception ex){MessageBox.Show(this,"Profile ready, but launch failed: "+ex.Message);}}
+            if(code==0){notify("Mods ready","Launching NFS Heat with the combined profile.",false);try{HeatGameLauncher.Launch(game,"ModData/HeatMusicV5Beta7_3",Path.Combine(workspace,"runtime"),Append);}catch(Exception ex){MessageBox.Show(this,"Profile ready, but launch failed: "+ex.Message);}}
             else if(code==2)notify("Launch cancelled","The active profile was preserved.",false);else notify("Frosty apply failed","Open the manager log for details.",true);cancelPath=null;if(Finished!=null)Finished();}));};
         try{process.Start();process.BeginOutputReadLine();process.BeginErrorReadLine();}catch(Exception ex){running=null;launch.Enabled=true;process.Dispose();MessageBox.Show(this,ex.Message);}
     }

@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const { spawn } = require('child_process');
 const { applyLayeredOverlay } = require('./HeatMusicV5LayeredOverlay');
 const { publishProfile, validateProfileTree, validateGameFileCoverage } = require('./HeatProfileFiles');
+const { resolveModOrder } = require('./HeatModOrder');
 
 let signalCancellation = false;
 let cleanupStaging = null;
@@ -87,7 +88,11 @@ async function main() {
   const workDir = path.resolve(config.workDir || '');
   const modData = path.resolve(config.modDataDir || '');
   const musicBuildDir = path.resolve(config.musicBuildDir || '');
-  const selected = [...(config.mods || []), config.musicMod].filter(Boolean).map(file => path.resolve(file));
+  const order = resolveModOrder(config.mods || [], config.musicMod);
+  const selected = order.executorOrder;
+  emit('load-order', { rule: 'lower-list-items-win; soundtrack-highest',
+    displayOrder: order.displayOrder.map(file => path.basename(file)),
+    executorOrder: selected.map(file => path.basename(file)) });
 
   assertFile(gameExe, 'NFS Heat executable');
   assertFile(cli, 'Frosty CLI');
@@ -130,6 +135,8 @@ async function main() {
       await run(dotnet, [cli, 'update-mod', gameExe, source, '--output', temporary, '--initfs-key', key], cliDir,
         `update-mod:${path.basename(source)}`);
       checkpoint(config, `updating ${path.basename(source)}`);
+      if (!fs.statSync(temporary, { throwIfNoEntry: false })?.isFile())
+        throw new Error(`Frosty did not produce an updated mod for ${path.basename(source)}. Check the preceding Frosty log for a profile/format error. Select the original exported FBMOD, not a file from an internal mods/cache folder.`);
       fs.renameSync(temporary, cache);
     } else {
       emit('reused', { stage: 'update-mod', file: path.basename(source) });

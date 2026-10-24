@@ -4,7 +4,9 @@
 
 V5 uses an integrated manager based on the current GPLv3 Frosty pipeline. The intended workflow is: build one soundtrack FBMOD, import the original UNITE FBPACK, select its components, and use one Launch action. It does **not** claim compatibility with official Frosty Mod Manager 1.0.6.3.
 
-Direct parsing of the original UNITE 3.5 Standard Pack, component ordering, mutually exclusive Handling/Stance alternatives, transactional profile replacement, safe cancellation, cache reuse and state persistence are implemented. The custom soundtrack is always applied last. Automated validation of the combined profile matched all 199/199 expected soundtrack payload hashes. Gameplay testing is still required before a stable release.
+Direct parsing of the original UNITE 3.5 Standard Pack, component ordering, mutually exclusive Handling/Stance alternatives, transactional profile replacement, safe cancellation, cache reuse and state persistence are implemented. In **Beta 7.3**, lower list entries have higher priority; the soundtrack has highest priority. The list is reversed at the first-wins GPL executor boundary. The official Default Garage addon is optional and not bundled. Profile file coverage and links are validated before and after publication.
+
+The user confirmed the isolated UNITE + Default Garage + soundtrack test works after the staging-link repair. This does not establish universal compatibility or solve the underlying custom-garage rendering issue. See [Beta 7.3](docs/v5-beta7-3.md) and its delivery report for packaged-build tests. Gameplay testing remains required before a stable release.
 
 See [V5 validation](docs/v5-validation.md) and [Frosty GPL integration](frostygpl/README.md) for the exact test boundary, pinned upstream revision, reproducible patch and license obligations.
 
