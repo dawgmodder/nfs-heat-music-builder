@@ -7,39 +7,12 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { materializeTree } = require('./HeatProfileFiles');
 const { readCatalogs, readLocation, writeLocation, resolveCas, locateChunk } = require('./HeatMusicCasAddress');
 
 const shaBytes = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
 function assertFile(file, label) {
   if (!fs.statSync(file, { throwIfNoEntry: false })?.isFile()) throw new Error(`${label} missing: ${file}`);
-}
-function linkFile(source, target) {
-  try { fs.linkSync(source, target); }
-  catch (error) {
-    if (!['EXDEV', 'EPERM', 'EACCES'].includes(error.code)) throw error;
-    fs.copyFileSync(source, target, fs.constants.COPYFILE_EXCL);
-  }
-}
-function linkDirectory(source, target) {
-  try { fs.symlinkSync(source, target, 'junction'); }
-  catch (error) {
-    if (!['EPERM', 'EACCES'].includes(error.code)) throw error;
-    cloneTree(source, target, new Map(), new Set());
-  }
-}
-function cloneTree(source, target, replacements, ancestors, relative = '') {
-  fs.mkdirSync(target);
-  for (const entry of fs.readdirSync(source, { withFileTypes: true })) {
-    const from = path.join(source, entry.name);
-    const to = path.join(target, entry.name);
-    const rel = path.join(relative, entry.name).toLowerCase();
-    const replacement = replacements.get(rel);
-    if (replacement) { linkFile(replacement, to); continue; }
-    if (entry.isDirectory()) {
-      if (ancestors.has(rel)) cloneTree(from, to, replacements, ancestors, rel);
-      else linkDirectory(from, to);
-    } else linkFile(from, to);
-  }
 }
 function wrapEa(raw) {
   const parts = [];
@@ -118,16 +91,11 @@ function patchDataLayer(staging, buildDir, manifest, gameRoot) {
       throw new Error(`Data music chunk conflicts with another selected mod: ${item.name}`);
     locations.set(item.chunkId, at);
   }
-  // Materialize every destination catalog before replacing files. A directory
-  // junction at a destination would otherwise redirect writes into the game.
-  const ancestors = new Set(['win32']);
-  for (const bundle of catalogs.values()) {
-    const parts = bundle.split(/[\\/]/);
-    for (let i = 1; i <= parts.length; i++) ancestors.add(path.join(...parts.slice(0, i)).toLowerCase());
-  }
+  // Materialize ALL directories, including loc and levels. Linking untouched
+  // directories to active Data breaks when active is removed or staging moves.
   const temporary = `${active}.music-overlay-${process.pid}`;
   if (fs.existsSync(temporary)) fs.rmSync(temporary, { recursive: true, force: true });
-  cloneTree(source, temporary, new Map(), ancestors);
+  materializeTree(source, temporary);
   if (fs.lstatSync(active).isSymbolicLink()) fs.unlinkSync(active);
   else fs.rmSync(active, { recursive: true, force: true });
   fs.renameSync(temporary, active);

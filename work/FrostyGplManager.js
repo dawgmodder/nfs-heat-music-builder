@@ -8,6 +8,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 const { applyLayeredOverlay } = require('./HeatMusicV5LayeredOverlay');
+const { publishProfile, validateProfileTree, validateGameFileCoverage } = require('./HeatProfileFiles');
 
 let signalCancellation = false;
 let cleanupStaging = null;
@@ -113,7 +114,7 @@ async function main() {
     throw new Error('ModData must be inside the NFS Heat game directory before assembly.');
   }
   const staging = path.join(modDataParent, `.${path.basename(modData)}-building-${process.pid}-${Date.now()}`);
-  const previous = `${modData}.previous`;
+  const previous = `${modData}.previous-${process.pid}-${Date.now()}`;
   cleanupStaging = staging;
   if (fs.existsSync(modsDir)) fs.rmSync(modsDir, { recursive: true, force: true });
   fs.mkdirSync(modsDir, { recursive: true });
@@ -153,19 +154,12 @@ async function main() {
   emit('validated-audio', overlay);
   checkpoint(config, 'layered music audio validation');
   emit('validated', { staging });
-  if (fs.existsSync(previous)) fs.rmSync(previous, { recursive: true, force: true });
-  let movedPrevious = false;
-  try {
-    if (fs.existsSync(modData)) {
-      fs.renameSync(modData, previous);
-      movedPrevious = true;
-    }
-    fs.renameSync(staging, modData);
-    cleanupStaging = null;
-  } catch (error) {
-    if (!fs.existsSync(modData) && movedPrevious && fs.existsSync(previous)) fs.renameSync(previous, modData);
-    throw error;
-  }
+  const profileFiles = publishProfile(staging, modData, previous, (root, forbidden) => ({
+    ...validateProfileTree(root, forbidden),
+    requiredGameFiles: validateGameFileCoverage(root, path.dirname(gameExe))
+  }));
+  cleanupStaging = null;
+  emit('validated-profile-files', profileFiles);
   emit('ready', { modData, launchArguments: ['-dataPath', relativeDataPath] });
 }
 
